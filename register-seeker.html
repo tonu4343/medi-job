@@ -64,6 +64,11 @@
     .submit-row .wide-cta { min-width: 260px; min-height: 58px; margin: 0; border: 0; border-radius: 8px; background: linear-gradient(180deg, #1ab79f, #119f91); box-shadow: 0 15px 28px rgba(22, 163, 148, .24); font-size: 18px; cursor: pointer; }
     .back-button { min-height: 58px; padding: 0 28px; color: #007a6c; background: #fff; border: 1px solid #a9ddd8; border-radius: 8px; font-size: 18px; font-weight: 900; }
     .form-message { display: none; color: #007a52; font-weight: 900; }
+    .oauth-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; color: #697a8b; font-size: 12px; font-weight: 800; }
+    .oauth-divider::before, .oauth-divider::after { content: ""; flex: 1; height: 1px; background: #dce8f0; }
+    .line-login-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 56px; color: #fff; background: #06c755; border: 0; border-radius: 8px; font-size: 16px; font-weight: 900; cursor: pointer; box-shadow: 0 10px 22px rgba(6, 199, 85, 0.22); }
+    .line-login-btn:disabled { opacity: 0.7; cursor: wait; }
+    .line-login-btn svg { width: 22px; height: 22px; }
     .side-stack { display: grid; gap: 18px; position: sticky; top: 96px; }
     .side-card { padding: 28px; }
     .side-card h2 { margin: 0 0 20px; color: #0f172a; font-size: 26px; font-weight: 900; }
@@ -118,6 +123,12 @@
           <label class="terms-row"><input type="checkbox" required><span><a href="terms.html" target="_blank" rel="noopener">&#21033;&#29992;&#35215;&#32004;</a>&#12392;<a href="privacy.html" target="_blank" rel="noopener">&#12503;&#12521;&#12452;&#12496;&#12471;&#12540;&#12509;&#12522;&#12471;&#12540;</a>&#12395;&#21516;&#24847;&#12375;&#12414;&#12377;&#12290;</span></label>
           <div class="submit-row"><button class="wide-cta" type="submit">&#28961;&#26009;&#12391;&#30331;&#37682;&#12377;&#12427;</button><a class="back-button" href="register.html">&#25147;&#12427;</a><span class="form-message" id="formMessage">&#30331;&#37682;&#24460;&#12289;&#12525;&#12464;&#12452;&#12531;&#30011;&#38754;&#12408;&#31227;&#21205;&#12375;&#12414;&#12377;&#12290;</span></div>
         </form>
+
+        <div class="oauth-divider"><span>または</span></div>
+        <button class="line-login-btn" id="lineLoginButton" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 5.69 2 10.24c0 4.09 3.56 7.51 8.36 8.15.33.07.77.22.88.5.1.26.07.66.03.92l-.14.85c-.04.26-.2.99.87.54 1.06-.45 5.73-3.37 7.82-5.77C21.24 13.75 22 12.08 22 10.24 22 5.69 17.52 2 12 2z"/></svg>
+          LINEで登録
+        </button>
       </section>
 
       <aside class="side-stack" aria-label="registration help">
@@ -146,6 +157,30 @@
           button.setAttribute("aria-label", showing ? "パスワードを表示する" : "パスワードを隠す");
         });
       });
+
+      const config = window.MEDISPOT_SUPABASE || {};
+      const configured = config.url && config.anonKey && !config.url.includes("YOUR_PROJECT_ID") && !config.anonKey.includes("YOUR_SUPABASE_ANON_KEY");
+      const supabaseClient = configured && window.supabase ? window.supabase.createClient(config.url, config.anonKey) : null;
+      const lineLoginButton = document.getElementById("lineLoginButton");
+      if (lineLoginButton) {
+        lineLoginButton.addEventListener("click", async function () {
+          const messageEl = document.getElementById("formMessage");
+          if (!supabaseClient) {
+            if (messageEl) { messageEl.style.display = "inline"; messageEl.style.color = "#b42318"; messageEl.textContent = "ただいまLINE登録をご利用いただけません。しばらくしてから再度お試しください。"; }
+            return;
+          }
+          lineLoginButton.disabled = true;
+          const { error } = await supabaseClient.auth.signInWithOAuth({
+            provider: "custom:line",
+            options: { redirectTo: window.location.origin + "/seeker-dashboard.html" }
+          });
+          if (error) {
+            lineLoginButton.disabled = false;
+            console.error(error);
+            if (messageEl) { messageEl.style.display = "inline"; messageEl.style.color = "#b42318"; messageEl.textContent = "LINE登録を開始できませんでした。しばらくしてから再度お試しください。"; }
+          }
+        });
+      }
     })();
   </script>
 <script src="pwa-register.js"></script></body>
