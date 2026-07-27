@@ -61,25 +61,24 @@
   tabs.forEach((tab) => tab.addEventListener("click", () => setRole(tab.dataset.role)));
 
   if (lineLoginButton) {
-    lineLoginButton.addEventListener("click", async () => {
-      if (!supabaseClient) {
-        showNotice("ただいまログインをご利用いただけません。しばらくしてから再度お試しください。", true);
+    lineLoginButton.addEventListener("click", () => {
+      const lineConfig = window.MEDISPOT_LINE || {};
+      if (!lineConfig.channelId || lineConfig.channelId.includes("YOUR_LINE_CHANNEL_ID")) {
+        showNotice("ただいまLINEログインをご利用いただけません。しばらくしてから再度お試しください。", true);
         return;
       }
-      lineLoginButton.disabled = true;
-      const { error } = await supabaseClient.auth.signInWithOAuth({
-        provider: "custom:line",
-        options: { redirectTo: window.location.origin + "/seeker-dashboard.html" }
+      const state = crypto.randomUUID();
+      const nonce = crypto.randomUUID();
+      sessionStorage.setItem("line_login_state", state);
+      const authorizeParams = new URLSearchParams({
+        response_type: "code",
+        client_id: lineConfig.channelId,
+        redirect_uri: lineConfig.redirectUri,
+        state: state,
+        scope: "profile openid email",
+        nonce: nonce
       });
-      // On success the browser navigates away to LINE immediately, so
-      // there's nothing further to do here; only a synchronous failure
-      // (e.g. the custom provider isn't configured) returns without
-      // navigating, so re-enable the button for that case only.
-      if (error) {
-        lineLoginButton.disabled = false;
-        console.error(error);
-        showNotice("LINEログインを開始できませんでした。しばらくしてから再度お試しください。", true);
-      }
+      window.location.href = "https://access.line.me/oauth2/v2.1/authorize?" + authorizeParams.toString();
     });
   }
 

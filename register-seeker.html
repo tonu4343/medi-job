@@ -143,6 +143,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="line-config.js"></script>
   <script src="supabase-forms.js"></script>
   <script>
     (function () {
@@ -158,27 +159,27 @@
         });
       });
 
-      const config = window.MEDISPOT_SUPABASE || {};
-      const configured = config.url && config.anonKey && !config.url.includes("YOUR_PROJECT_ID") && !config.anonKey.includes("YOUR_SUPABASE_ANON_KEY");
-      const supabaseClient = configured && window.supabase ? window.supabase.createClient(config.url, config.anonKey) : null;
       const lineLoginButton = document.getElementById("lineLoginButton");
       if (lineLoginButton) {
-        lineLoginButton.addEventListener("click", async function () {
+        lineLoginButton.addEventListener("click", function () {
           const messageEl = document.getElementById("formMessage");
-          if (!supabaseClient) {
+          const lineConfig = window.MEDISPOT_LINE || {};
+          if (!lineConfig.channelId || lineConfig.channelId.includes("YOUR_LINE_CHANNEL_ID")) {
             if (messageEl) { messageEl.style.display = "inline"; messageEl.style.color = "#b42318"; messageEl.textContent = "ただいまLINE登録をご利用いただけません。しばらくしてから再度お試しください。"; }
             return;
           }
-          lineLoginButton.disabled = true;
-          const { error } = await supabaseClient.auth.signInWithOAuth({
-            provider: "custom:line",
-            options: { redirectTo: window.location.origin + "/seeker-dashboard.html" }
+          const state = crypto.randomUUID();
+          const nonce = crypto.randomUUID();
+          sessionStorage.setItem("line_login_state", state);
+          const authorizeParams = new URLSearchParams({
+            response_type: "code",
+            client_id: lineConfig.channelId,
+            redirect_uri: lineConfig.redirectUri,
+            state: state,
+            scope: "profile openid email",
+            nonce: nonce
           });
-          if (error) {
-            lineLoginButton.disabled = false;
-            console.error(error);
-            if (messageEl) { messageEl.style.display = "inline"; messageEl.style.color = "#b42318"; messageEl.textContent = "LINE登録を開始できませんでした。しばらくしてから再度お試しください。"; }
-          }
+          window.location.href = "https://access.line.me/oauth2/v2.1/authorize?" + authorizeParams.toString();
         });
       }
     })();

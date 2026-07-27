@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LINEログイン処理中 | Medical Spot Job</title>
+<meta name="robots" content="noindex" />
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7f8fa;
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+  }
+  .card {
+    max-width: 360px;
+    width: 90%;
+    background: #fff;
+    border-radius: 12px;
+    padding: 32px 28px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    margin: 0 auto 16px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #06c755;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  p { color: #374151; font-size: 14px; line-height: 1.6; margin: 0; }
+  .error { color: #b91c1c; }
+  a.retry {
+    display: inline-block;
+    margin-top: 16px;
+    color: #007a52;
+    text-decoration: underline;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="spinner" id="spinner"></div>
+  <p id="message">LINEログインを処理しています…</p>
+  <a class="retry" id="retryLink" href="login.html?role=seeker" style="display:none;">ログイン画面に戻る</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js"></script>
+<script src="line-config.js"></script>
+<script>
+(async function () {
+  const spinner = document.querySelector("#spinner");
+  const message = document.querySelector("#message");
+  const retryLink = document.querySelector("#retryLink");
+
+  function fail(text) {
+    if (spinner) spinner.style.display = "none";
+    if (message) {
+      message.textContent = text;
+      message.classList.add("error");
+    }
+    if (retryLink) retryLink.style.display = "inline-block";
+  }
+
+  const supabaseConfig = window.MEDISPOT_SUPABASE || {};
+  const lineConfig = window.MEDISPOT_LINE || {};
+  const configured =
+    supabaseConfig.url &&
+    supabaseConfig.anonKey &&
+    !supabaseConfig.url.includes("YOUR_PROJECT_ID") &&
+    !supabaseConfig.anonKey.includes("YOUR_SUPABASE_ANON_KEY");
+
+  if (!configured || !window.supabase) {
+    fail("ただいまログインをご利用いただけません。しばらくしてから再度お試しください。");
+    return;
+  }
+
+  const supabaseClient = window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey);
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  const state = params.get("state");
+  const lineError = params.get("error");
+
+  if (lineError) {
+    fail("LINEログインがキャンセルされました。");
+    return;
+  }
+
+  const expectedState = sessionStorage.getItem("line_login_state");
+  sessionStorage.removeItem("line_login_state");
+
+  if (!code || !state || !expectedState || state !== expectedState) {
+    fail("LINEログインの検証に失敗しました。もう一度お試しください。");
+    return;
+  }
+
+  try {
+    const res = await fetch(supabaseConfig.url + "/functions/v1/line-auth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: supabaseConfig.anonKey,
+        Authorization: "Bearer " + supabaseConfig.anonKey
+      },
+      body: JSON.stringify({ code: code })
+    });
+    const body = await res.json();
+    if (!res.ok || body.error) {
+      throw new Error(body.error || "LINE authentication failed");
+    }
+
+    const { error: verifyError } = await supabaseClient.auth.verifyOtp({
+      type: "magiclink",
+      email: body.email,
+      token_hash: body.token_hash
+    });
+    if (verifyError) throw verifyError;
+
+    message.textContent = "ログインしました。マイページへ移動します。";
+    window.location.href = "seeker-dashboard.html";
+  } catch (err) {
+    console.error(err);
+    fail("LINEログインに失敗しました。しばらくしてから再度お試しください。");
+  }
+})();
+</script>
+</body>
+</html>
