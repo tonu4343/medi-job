@@ -17,6 +17,8 @@
   const notice = document.querySelector("#notice");
   const form = document.querySelector("#loginForm");
   const params = new URLSearchParams(window.location.search);
+  const oauthDivider = document.querySelector("#oauthDivider");
+  const lineLoginButton = document.querySelector("#lineLoginButton");
 
   function showNotice(text, isError) {
     if (!notice) return;
@@ -50,9 +52,36 @@
     });
     if (roleInput) roleInput.value = role;
     if (submitBtn) submitBtn.classList.toggle("employer", role === "employer");
+    // LINE login is seeker-only for now.
+    const isSeeker = role !== "employer";
+    if (oauthDivider) oauthDivider.hidden = !isSeeker;
+    if (lineLoginButton) lineLoginButton.hidden = !isSeeker;
   }
 
   tabs.forEach((tab) => tab.addEventListener("click", () => setRole(tab.dataset.role)));
+
+  if (lineLoginButton) {
+    lineLoginButton.addEventListener("click", async () => {
+      if (!supabaseClient) {
+        showNotice("ただいまログインをご利用いただけません。しばらくしてから再度お試しください。", true);
+        return;
+      }
+      lineLoginButton.disabled = true;
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: "custom:line",
+        options: { redirectTo: window.location.origin + "/seeker-dashboard.html" }
+      });
+      // On success the browser navigates away to LINE immediately, so
+      // there's nothing further to do here; only a synchronous failure
+      // (e.g. the custom provider isn't configured) returns without
+      // navigating, so re-enable the button for that case only.
+      if (error) {
+        lineLoginButton.disabled = false;
+        console.error(error);
+        showNotice("LINEログインを開始できませんでした。しばらくしてから再度お試しください。", true);
+      }
+    });
+  }
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

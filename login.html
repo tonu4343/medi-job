@@ -279,6 +279,42 @@
       font-weight: 900;
     }
 
+    .oauth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .oauth-divider::before, .oauth-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+    .oauth-divider[hidden] { display: none; }
+    .line-login-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 54px;
+      color: #fff;
+      background: #06c755;
+      border: 0;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(6, 199, 85, 0.22);
+    }
+    .line-login-btn:disabled { opacity: 0.7; cursor: wait; }
+    .line-login-btn svg { width: 22px; height: 22px; }
+    .line-login-btn[hidden] { display: none; }
+
     @media (max-width: 820px) {
       .header-inner {
         flex-wrap: wrap;
@@ -360,6 +396,12 @@
         </div>
         <button class="submit-btn" type="submit">ログインする</button>
       </form>
+
+      <div class="oauth-divider" id="oauthDivider"><span>または</span></div>
+      <button class="line-login-btn" id="lineLoginButton" type="button">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 5.69 2 10.24c0 4.09 3.56 7.51 8.36 8.15.33.07.77.22.88.5.1.26.07.66.03.92l-.14.85c-.04.26-.2.99.87.54 1.06-.45 5.73-3.37 7.82-5.77C21.24 13.75 22 12.08 22 10.24 22 5.69 17.52 2 12 2z"/></svg>
+        LINEでログイン
+      </button>
 
       <div class="form-links">
         <a href="register-seeker.html">求職者として登録</a>
