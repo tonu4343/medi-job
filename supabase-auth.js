@@ -46,6 +46,18 @@
       : "ログインできませんでした。メールアドレスとパスワードを確認してください。";
   }
 
+  function generateRandomId() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID();
+    }
+    if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+      const bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      return Array.from(bytes, function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+    }
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
   function setRole(role) {
     tabs.forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.role === role);
@@ -62,23 +74,28 @@
 
   if (lineLoginButton) {
     lineLoginButton.addEventListener("click", () => {
-      const lineConfig = window.MEDISPOT_LINE || {};
-      if (!lineConfig.channelId || lineConfig.channelId.includes("YOUR_LINE_CHANNEL_ID")) {
-        showNotice("ただいまLINEログインをご利用いただけません。しばらくしてから再度お試しください。", true);
-        return;
+      try {
+        const lineConfig = window.MEDISPOT_LINE || {};
+        if (!lineConfig.channelId || lineConfig.channelId.includes("YOUR_LINE_CHANNEL_ID")) {
+          showNotice("ただいまLINEログインをご利用いただけません。しばらくしてから再度お試しください。", true);
+          return;
+        }
+        const state = generateRandomId();
+        const nonce = generateRandomId();
+        sessionStorage.setItem("line_login_state", state);
+        const authorizeParams = new URLSearchParams({
+          response_type: "code",
+          client_id: lineConfig.channelId,
+          redirect_uri: lineConfig.redirectUri,
+          state: state,
+          scope: "profile openid email",
+          nonce: nonce
+        });
+        window.location.href = "https://access.line.me/oauth2/v2.1/authorize?" + authorizeParams.toString();
+      } catch (err) {
+        console.error(err);
+        showNotice("LINEログインを開始できませんでした。しばらくしてから再度お試しください。", true);
       }
-      const state = crypto.randomUUID();
-      const nonce = crypto.randomUUID();
-      sessionStorage.setItem("line_login_state", state);
-      const authorizeParams = new URLSearchParams({
-        response_type: "code",
-        client_id: lineConfig.channelId,
-        redirect_uri: lineConfig.redirectUri,
-        state: state,
-        scope: "profile openid email",
-        nonce: nonce
-      });
-      window.location.href = "https://access.line.me/oauth2/v2.1/authorize?" + authorizeParams.toString();
     });
   }
 
