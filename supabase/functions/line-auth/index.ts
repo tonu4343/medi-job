@@ -67,40 +67,67 @@ Deno.serve(async (req) => {
     // 3) Find or create the seeker, matched by line_user_id (stable
     // per channel; re-creating the LINE channel would issue new sub
     // values even for the same real person).
-    const { data: existing, error: existingError } = await admin
+    const { data: existingByLine, error: existingByLineError } = await admin
       .from("seeker_profiles")
       .select("user_id")
       .eq("line_user_id", lineUserId)
       .maybeSingle();
-    if (existingError) throw existingError;
+    if (existingByLineError) throw existingByLineError;
 
-    let userId = existing?.user_id as string | undefined;
-    if (!userId) {
-      const { data: created, error: createError } = await admin.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: { line_user_id: lineUserId, name, picture, provider: "line" },
-      });
-      if (createError) throw createError;
-      userId = created.user.id;
+    let userId = existingByLine?.user_id as string | undefined;
 
-      const { error: insertError } = await admin.from("seeker_profiles").insert({
-        user_id: userId,
-        line_user_id: lineUserId,
-        name,
-        email,
-        source_path: "line-login",
-      });
-      if (insertError) throw insertError;
-    } else {
-      // Keep the display name in sync on repeat logins (LINE display
-      // names can change), but never touch fields the seeker has since
-      // filled in themselves elsewhere (license, resume, etc.).
+    if (userId) {
+      // Repeat LINE login - keep the display name in sync (LINE names
+      // can change) but never touch fields the seeker filled in
+      // themselves elsewhere (license, resume, etc.).
       const { error: updateError } = await admin
         .from("seeker_profiles")
         .update({ name, updated_at: new Date().toISOString() })
         .eq("user_id", userId);
       if (updateError) throw updateError;
+    } else {
+      // No LINE-linked account yet. If LINE handed back a real email
+      // (only possible once the channel's email scope is approved -
+      // the synthetic @line.local fallback can never match a real
+      // signup) and a seeker already registered that email via
+      // password signup, link this LINE identity onto that existing
+      // account instead of creating a disconnected duplicate - so the
+      // same person can sign in with either method afterward.
+      const hasRealEmail = typeof payload.email === "string";
+      if (hasRealEmail) {
+        const { data: existingByEmail, error: existingByEmailError } = await admin
+          .from("seeker_profiles")
+          .select("user_id")
+          .eq("email", email)
+          .maybeSingle();
+        if (existingByEmailError) throw existingByEmailError;
+        userId = existingByEmail?.user_id as string | undefined;
+      }
+
+      if (userId) {
+        const { error: linkError } = await admin
+          .from("seeker_profiles")
+          .update({ line_user_id: lineUserId, name, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+        if (linkError) throw linkError;
+      } else {
+        const { data: created, error: createError } = await admin.auth.admin.createUser({
+          email,
+          email_confirm: true,
+          user_metadata: { line_user_id: lineUserId, name, picture, provider: "line" },
+        });
+        if (createError) throw createError;
+        userId = created.user.id;
+
+        const { error: insertError } = await admin.from("seeker_profiles").insert({
+          user_id: userId,
+          line_user_id: lineUserId,
+          name,
+          email,
+          source_path: "line-login",
+        });
+        if (insertError) throw insertError;
+      }
     }
 
     // 4) Issue a magic-link token the client can redeem for a real
