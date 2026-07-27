@@ -1,4 +1,4 @@
 window.MEDISPOT_LINE = {
-  channelId: "YOUR_LINE_CHANNEL_ID",
+  channelId: "2010855219",
   redirectUri: window.location.origin + "/line-callback.html"
 };
