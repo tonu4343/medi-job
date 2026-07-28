@@ -72,6 +72,10 @@
     .verify-badge.verified { color: var(--green-dark); background: #ecfff5; border: 1px solid #b8ebcf; }
     .verify-badge.pending { color: #b5670f; background: #fff6e9; border: 1px solid #f2cf9c; }
 
+    #lineLinkStatus.line-status-badge { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 26px; padding: 0 12px; border-radius: 999px; font-size: 11.5px; font-weight: 900; }
+    #lineLinkStatus.line-status-linked { color: var(--green-dark); background: #ecfff5; border: 1px solid #b8ebcf; }
+    #lineLinkStatus.line-status-unlinked { color: var(--blue); background: #edf7ff; border: 1px solid #b9dbf5; }
+
     .visibility-field { padding: 13px 4px 16px; border-top: 1px solid var(--line); }
     .visibility-field > div:first-child { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
     .visibility-select { width: 100%; min-height: 46px; padding: 0 14px; color: #37566f; background: #fbfdff; border: 1px solid #cfdfe9; border-radius: 8px; font: inherit; font-size: 13.5px; }
@@ -190,10 +194,10 @@
               <span class="settings-row-label"><strong>パスワード変更</strong><span>ログイン用パスワードを更新</span></span>
               <span class="settings-row-chevron" aria-hidden="true">›</span>
             </button>
-            <a class="settings-row" href="#" aria-disabled="true">
+            <a class="settings-row" id="lineLinkRow" href="#" target="_blank" rel="noopener">
               <span class="settings-row-icon"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-4-1L3 20l1.1-5.5A8.38 8.38 0 0 1 4 12 8.5 8.5 0 0 1 12.5 3.5 8.38 8.38 0 0 1 21 11.5z"/></svg></span>
-              <span class="settings-row-label"><strong>LINE連携</strong><span>LINEで通知を受け取る</span></span>
-              <span class="nav-soon">準備中</span>
+              <span class="settings-row-label"><strong>LINE連携</strong><span id="lineLinkSubtext">LINEで通知を受け取る</span></span>
+              <span class="nav-soon" id="lineLinkStatus">準備中</span>
             </a>
           </div>
         </section>
@@ -346,6 +350,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="line-config.js"></script>
   <script src="account-guard.js"></script>
   <script>
     (function () {
@@ -473,6 +478,38 @@
             await supabaseClient.from("seeker_profiles").update({ notification_preferences: prefs }).eq("id", currentProfile.id);
           });
         });
+
+        const lineLinkRow = document.getElementById("lineLinkRow");
+        const lineLinkStatus = document.getElementById("lineLinkStatus");
+        const lineLinkSubtext = document.getElementById("lineLinkSubtext");
+        const lineConfig = window.MEDISPOT_LINE || {};
+        const addFriendUrl = lineConfig.officialAccountAddFriendUrl;
+        if (lineLinkRow && lineLinkStatus) {
+          lineLinkStatus.classList.remove("line-status-badge", "line-status-linked", "line-status-unlinked");
+          if (!addFriendUrl || addFriendUrl.includes("YOUR_LINE_OA_ADD_FRIEND_URL")) {
+            lineLinkStatus.textContent = "準備中";
+            lineLinkRow.href = "#";
+            lineLinkRow.setAttribute("aria-disabled", "true");
+          } else if (!currentProfile.line_user_id) {
+            lineLinkStatus.textContent = "LINEログインが必要";
+            lineLinkStatus.classList.add("line-status-badge", "line-status-unlinked");
+            lineLinkSubtext.textContent = "LINEでログインすると連携できます";
+            lineLinkRow.href = "#";
+            lineLinkRow.setAttribute("aria-disabled", "true");
+          } else if (currentProfile.line_messaging_linked_at) {
+            lineLinkStatus.textContent = "連携済み";
+            lineLinkStatus.classList.add("line-status-badge", "line-status-linked");
+            lineLinkSubtext.textContent = "LINEで通知を受け取っています";
+            lineLinkRow.href = addFriendUrl;
+            lineLinkRow.removeAttribute("aria-disabled");
+          } else {
+            lineLinkStatus.textContent = "未連携";
+            lineLinkStatus.classList.add("line-status-badge", "line-status-unlinked");
+            lineLinkSubtext.textContent = "友だち追加して通知を受け取る";
+            lineLinkRow.href = addFriendUrl;
+            lineLinkRow.removeAttribute("aria-disabled");
+          }
+        }
 
         const visibilitySelect = document.getElementById("visibilitySelect");
         visibilitySelect.value = currentProfile.profile_visibility || "応募した求人者のみ";
