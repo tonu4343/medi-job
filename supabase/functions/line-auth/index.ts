@@ -140,8 +140,11 @@ Deno.serve(async (req) => {
     });
     if (linkErr) throw linkErr;
 
+    // The client only calls verifyOtp with token_hash (passing email
+    // alongside it broke verification in production), so email isn't
+    // needed in the response.
     return new Response(
-      JSON.stringify({ email, token_hash: link.properties.hashed_token }),
+      JSON.stringify({ token_hash: link.properties.hashed_token }),
       { headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (e) {

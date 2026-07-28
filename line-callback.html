@@ -120,9 +120,10 @@
       throw new Error(body.error || "LINE authentication failed");
     }
 
+    // token_hash alone fully identifies the OTP; passing email
+    // alongside it caused verifyOtp to fail in production testing.
     const { error: verifyError } = await supabaseClient.auth.verifyOtp({
       type: "magiclink",
-      email: body.email,
       token_hash: body.token_hash
     });
     if (verifyError) throw verifyError;
