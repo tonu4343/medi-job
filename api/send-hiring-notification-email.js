@@ -1,11 +1,12 @@
 // Vercel serverless function: emails the seeker a congratulatory
-// notice specifically when their application status becomes 'hired'.
-// Called by a Supabase Database Webhook on UPDATE of
-// seeker_applications (configured in the Supabase dashboard, not in
-// code). Separate from the general application-status LINE push,
-// which covers every status transition - this is only the hiring
-// moment, matching the "Hiring notification" requirement.
-const { logEmailDelivery } = require("./_lib/email-log");
+// notice and the employer a hiring-procedure-complete notice,
+// specifically when an application's status becomes 'hired'. Called
+// by a Supabase Database Webhook on UPDATE of seeker_applications
+// (configured in the Supabase dashboard, not in code). Separate from
+// the general application-status LINE push, which covers every
+// status transition - this is only the hiring moment.
+const { sendBrandedEmail, logSkippedEmail } = require("./_lib/sendEmail");
+const { escapeHtml } = require("./_lib/emailBrand");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -13,8 +14,8 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { RESEND_API_KEY, RESEND_EMAIL_DOMAIN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
-  if (!RESEND_API_KEY || !RESEND_EMAIL_DOMAIN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     console.error("send-hiring-notification-email: missing server config");
     res.status(200).json({ success: false, message: "サーバー設定が不足しています。" });
     return;
@@ -49,10 +50,12 @@ module.exports = async function handler(req, res) {
     "Content-Type": "application/json"
   };
 
-  const subject = "【Medical Spot Job】採用が決定しました";
-  const jobTitle = record.job_title || "求人";
-  const facilityName = record.facility_name || "";
+  const jobTitle = escapeHtml(record.job_title || "求人");
+  const facilityName = escapeHtml(record.facility_name || "");
+  const hiredAt = escapeHtml(new Date().toLocaleString("ja-JP"));
 
+  // 1) Seeker congratulations - links to Application Detail, not chat.
+  const seekerSubject = "採用決定のお知らせ｜Medical Spot Job";
   try {
     const seekerRes = await fetch(
       SUPABASE_URL + "/rest/v1/seeker_profiles?user_id=eq." + encodeURIComponent(record.user_id) +
@@ -67,46 +70,76 @@ module.exports = async function handler(req, res) {
       (seeker.notification_preferences.application_status !== false &&
         seeker.notification_preferences.email !== false);
 
-    if (!seeker || !seeker.email) {
-      await logEmailDelivery({ type: "hiring_notification", recipient: "-", subject, status: "skipped", error: "seeker not found", relatedId: record.id });
-      res.status(200).json({ success: false, message: "seeker not found" });
-      return;
-    }
-    if (!notifyEnabled) {
-      await logEmailDelivery({ type: "hiring_notification", recipient: seeker.email, subject, status: "skipped", error: "notifications disabled", relatedId: record.id });
-      res.status(200).json({ success: false, message: "notifications disabled" });
-      return;
-    }
-
-    const html =
-      "<p>おめでとうございます。以下の求人への採用が決定しました。</p>" +
-      "<p><strong>" + facilityName + "</strong><br>" + jobTitle + "</p>" +
-      "<p><a href=\"https://medispotjob.vercel.app/application-chat.html?id=" + encodeURIComponent(record.id) + "\">詳細を確認する</a></p>";
-
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + RESEND_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "Medical Spot Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
-        to: [seeker.email],
-        subject: subject,
-        html: html
-      })
-    });
-
-    if (!resendRes.ok) {
-      const errorText = await resendRes.text();
-      console.error("Resend hiring notification failed", errorText);
-      await logEmailDelivery({ type: "hiring_notification", recipient: seeker.email, subject, status: "failed", error: errorText, relatedId: record.id });
+    if (seeker && seeker.email && notifyEnabled) {
+      const seekerHtml =
+        "<p>おめでとうございます。以下の求人への採用が決定しました。</p>" +
+        "<p><strong>" + facilityName + "</strong><br>" + jobTitle + "</p>" +
+        "<p>採用決定日: " + hiredAt + "</p>" +
+        "<p>今後の流れについては、応募詳細ページよりご確認いただけます。ご不明な点があれば、施設担当者へメッセージでお問い合わせください。</p>";
+      await sendBrandedEmail({
+        type: "hiring_notification_seeker",
+        relatedId: record.id,
+        to: seeker.email,
+        subject: seekerSubject,
+        heading: "採用が決定しました",
+        bodyHtml: seekerHtml,
+        ctaText: "採用内容を確認する",
+        ctaUrl: "https://medispotjob.vercel.app/application-detail.html?id=" + encodeURIComponent(record.id)
+      });
     } else {
-      await logEmailDelivery({ type: "hiring_notification", recipient: seeker.email, subject, status: "sent", relatedId: record.id });
+      await logSkippedEmail({
+        type: "hiring_notification_seeker",
+        relatedId: record.id,
+        recipient: seeker?.email,
+        subject: seekerSubject,
+        reason: !seeker?.email ? "seeker not found" : "notifications disabled"
+      });
     }
   } catch (error) {
-    console.error("send-hiring-notification-email error", error);
-    await logEmailDelivery({ type: "hiring_notification", recipient: "-", subject, status: "failed", error: String(error), relatedId: record.id });
+    console.error("send-hiring-notification-email (seeker) error", error);
+  }
+
+  // 2) Employer hiring-procedure-complete confirmation.
+  const employerSubject = "採用手続きが完了しました";
+  if (record.employer_id) {
+    try {
+      const employerRes = await fetch(
+        SUPABASE_URL + "/rest/v1/employer_profiles?user_id=eq." + encodeURIComponent(record.employer_id) +
+          "&select=email,notification_preferences",
+        { headers: serviceHeaders }
+      );
+      if (!employerRes.ok) throw new Error("failed to fetch employer: " + employerRes.status + " " + (await employerRes.text()));
+      const employers = await employerRes.json();
+      const employer = employers && employers[0];
+      const notifyEnabled = !employer?.notification_preferences || employer.notification_preferences.hires !== false;
+
+      if (employer && employer.email && notifyEnabled) {
+        const employerHtml =
+          "<p>以下の応募について、採用手続きが完了しました。</p>" +
+          "<p><strong>" + jobTitle + "</strong></p>" +
+          "<p>採用者: " + escapeHtml(record.seeker_name || "求職者") + "<br>採用決定日: " + hiredAt + "</p>";
+        await sendBrandedEmail({
+          type: "hiring_notification_employer",
+          relatedId: record.id,
+          to: employer.email,
+          subject: employerSubject,
+          heading: "採用手続きが完了しました",
+          bodyHtml: employerHtml,
+          ctaText: "応募者を確認する",
+          ctaUrl: "https://medispotjob.vercel.app/employer-applicant.html?id=" + encodeURIComponent(record.id)
+        });
+      } else {
+        await logSkippedEmail({
+          type: "hiring_notification_employer",
+          relatedId: record.id,
+          recipient: employer?.email,
+          subject: employerSubject,
+          reason: !employer?.email ? "employer not found" : "notifications disabled"
+        });
+      }
+    } catch (error) {
+      console.error("send-hiring-notification-email (employer) error", error);
+    }
   }
 
   res.status(200).json({ success: true });

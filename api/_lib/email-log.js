@@ -4,7 +4,7 @@
 //
 // Never throws - a logging failure must not affect whether the actual
 // email send is reported as successful to the caller.
-async function logEmailDelivery({ type, recipient, subject, status, error, relatedId }) {
+async function logEmailDelivery({ type, recipient, subject, status, error, relatedId, resendMessageId }) {
   const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
   try {
@@ -22,7 +22,8 @@ async function logEmailDelivery({ type, recipient, subject, status, error, relat
         subject: subject,
         status: status,
         error_message: error || null,
-        related_id: relatedId || null
+        related_id: relatedId || null,
+        resend_message_id: resendMessageId || null
       })
     });
   } catch (e) {

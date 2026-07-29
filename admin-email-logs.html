@@ -130,10 +130,14 @@
               <option value="">すべての種類</option>
               <option value="seeker_welcome">求職者：ウェルカムメール</option>
               <option value="employer_welcome">求人者：ウェルカムメール</option>
+              <option value="job_published">求人掲載完了</option>
               <option value="application_confirmation">応募確認</option>
               <option value="application_alert">新着応募通知</option>
-              <option value="message_notification">メッセージ通知</option>
-              <option value="hiring_notification">採用通知</option>
+              <option value="message_notification_seeker">メッセージ通知（求職者宛）</option>
+              <option value="message_notification_employer">メッセージ通知（求人者宛）</option>
+              <option value="hiring_notification_seeker">採用通知（求職者宛）</option>
+              <option value="hiring_notification_employer">採用通知（求人者宛）</option>
+              <option value="rejection_notification">選考結果通知</option>
             </select>
             <select class="filter-select" id="statusFilter">
               <option value="">すべての状態</option>
@@ -146,8 +150,8 @@
         </div>
         <div class="admin-table-wrap">
           <table class="admin-table">
-            <thead><tr><th>日時</th><th>種類</th><th>送信先</th><th>件名</th><th>状態</th><th>エラー内容</th></tr></thead>
-            <tbody id="logTableBody"><tr><td colspan="6" class="table-empty">読み込んでいます…</td></tr></tbody>
+            <thead><tr><th>日時</th><th>種類</th><th>送信先</th><th>件名</th><th>状態</th><th>Resend ID</th><th>エラー内容</th></tr></thead>
+            <tbody id="logTableBody"><tr><td colspan="7" class="table-empty">読み込んでいます…</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -171,10 +175,14 @@
       const TYPE_LABELS = {
         seeker_welcome: "求職者：ウェルカムメール",
         employer_welcome: "求人者：ウェルカムメール",
+        job_published: "求人掲載完了",
         application_confirmation: "応募確認",
         application_alert: "新着応募通知",
-        message_notification: "メッセージ通知",
-        hiring_notification: "採用通知"
+        message_notification_seeker: "メッセージ通知（求職者宛）",
+        message_notification_employer: "メッセージ通知（求人者宛）",
+        hiring_notification_seeker: "採用通知（求職者宛）",
+        hiring_notification_employer: "採用通知（求人者宛）",
+        rejection_notification: "選考結果通知"
       };
       const STATUS_LABELS = { sent: "送信成功", failed: "送信失敗", skipped: "スキップ" };
 
@@ -197,7 +205,7 @@
       function renderLogs(rows) {
         const body = document.getElementById("logTableBody");
         text("logTableCount", rows.length ? "(" + rows.length + "件)" : "");
-        if (!rows.length) { body.innerHTML = '<tr><td colspan="6" class="table-empty">該当するログがありません。</td></tr>'; return; }
+        if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="table-empty">該当するログがありません。</td></tr>'; return; }
         body.innerHTML = rows.map(function (r) {
           return "<tr>"
             + "<td class=\"time-cell\">" + esc(formatDateTime(r.created_at)) + "</td>"
@@ -205,6 +213,7 @@
             + "<td class=\"name-cell\">" + esc(r.recipient_email) + "</td>"
             + "<td>" + esc(r.subject) + "</td>"
             + "<td><span class=\"status-pill " + esc(r.status) + "\">" + esc(STATUS_LABELS[r.status] || r.status) + "</span></td>"
+            + "<td class=\"error-cell\">" + esc(r.resend_message_id || "-") + "</td>"
             + "<td class=\"error-cell\">" + esc(r.error_message || "-") + "</td>"
             + "</tr>";
         }).join("");

@@ -4,17 +4,12 @@
 // itself (the caller fires this without awaiting failure), so a
 // Resend outage never prevents someone from signing up. Separate from
 // Supabase's own auth confirmation email.
-const { logEmailDelivery } = require("./_lib/email-log");
+const { sendBrandedEmail } = require("./_lib/sendEmail");
+const { escapeHtml } = require("./_lib/emailBrand");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ success: false, message: "Method not allowed" });
-    return;
-  }
-
-  const { RESEND_API_KEY, RESEND_EMAIL_DOMAIN } = process.env;
-  if (!RESEND_API_KEY || !RESEND_EMAIL_DOMAIN) {
-    res.status(500).json({ success: false, message: "サーバー設定が不足しています。" });
     return;
   }
 
@@ -30,44 +25,22 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const subject = "ご登録ありがとうございます｜Medical Spot Job";
-  const greetingName = contactName ? contactName + " 様" : "この度は";
-  const facilityLine = facilityName ? "<p>" + facilityName + " 様のご登録を確認いたしました。</p>" : "";
-  const html =
-    "<p>" + greetingName + "、Medical Spot Jobにご登録いただきありがとうございます。</p>" +
+  const greetingName = contactName ? escapeHtml(contactName) + " 様" : "この度は";
+  const facilityLine = facilityName ? "<p>" + escapeHtml(facilityName) + " 様のご登録を確認いたしました。</p>" : "";
+  const bodyHtml =
+    "<p>" + greetingName + "、Medical Spot Jobへの求人者登録が完了しました。</p>" +
     facilityLine +
-    "<p>求人を掲載して、必要な人材を募集しましょう。</p>" +
-    "<p><a href=\"https://medispotjob.vercel.app/employer-dashboard.html\">マイページへ移動する</a></p>" +
-    "<p>Medical Spot Job 運営事務局</p>";
+    "<p>求人を掲載して、必要な人材の募集を始めましょう。</p>";
 
-  try {
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + RESEND_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "Medical Spot Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
-        to: [email],
-        subject: subject,
-        html: html
-      })
-    });
-    if (!resendRes.ok) {
-      const errorText = await resendRes.text();
-      console.error("Resend employer welcome email failed", errorText);
-      await logEmailDelivery({ type: "employer_welcome", recipient: email, subject, status: "failed", error: errorText });
-      res.status(502).json({ success: false, message: "メール送信に失敗しました。" });
-      return;
-    }
-  } catch (error) {
-    console.error("Resend employer welcome email threw", error);
-    await logEmailDelivery({ type: "employer_welcome", recipient: email, subject, status: "failed", error: String(error) });
-    res.status(502).json({ success: false, message: "メール送信に失敗しました。" });
-    return;
-  }
+  const result = await sendBrandedEmail({
+    type: "employer_welcome",
+    to: email,
+    subject: "求人者登録が完了しました｜Medical Spot Job",
+    heading: "ご登録ありがとうございます",
+    bodyHtml: bodyHtml,
+    ctaText: "ログインする",
+    ctaUrl: "https://medispotjob.vercel.app/login.html?role=employer"
+  });
 
-  await logEmailDelivery({ type: "employer_welcome", recipient: email, subject, status: "sent" });
-  res.status(200).json({ success: true });
+  res.status(result.ok ? 200 : 502).json({ success: result.ok });
 };
