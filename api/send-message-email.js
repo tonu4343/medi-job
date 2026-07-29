@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
         "&select=user_id,job_title,facility_name",
       { headers: serviceHeaders }
     );
-    if (!applicationRes.ok) throw new Error("failed to fetch application");
+    if (!applicationRes.ok) throw new Error("failed to fetch application: " + applicationRes.status + " " + (await applicationRes.text()));
     const applications = await applicationRes.json();
     const application = applications && applications[0];
     if (!application) {
@@ -74,7 +74,7 @@ module.exports = async function handler(req, res) {
         "&select=email,notification_preferences",
       { headers: serviceHeaders }
     );
-    if (!seekerRes.ok) throw new Error("failed to fetch seeker");
+    if (!seekerRes.ok) throw new Error("failed to fetch seeker: " + seekerRes.status + " " + (await seekerRes.text()));
     const seekers = await seekerRes.json();
     const seeker = seekers && seekers[0];
     const notifyEnabled = !seeker?.notification_preferences || seeker.notification_preferences.email !== false;

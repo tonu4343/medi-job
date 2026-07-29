@@ -100,7 +100,7 @@ module.exports = async function handler(req, res) {
           "&select=email,notification_preferences",
         { headers: serviceHeaders }
       );
-      if (!employerRes.ok) throw new Error("failed to fetch employer");
+      if (!employerRes.ok) throw new Error("failed to fetch employer: " + employerRes.status + " " + (await employerRes.text()));
       const employers = await employerRes.json();
       const employer = employers && employers[0];
       const notifyEnabled =

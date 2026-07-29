@@ -59,7 +59,7 @@ module.exports = async function handler(req, res) {
         "&select=email,notification_preferences",
       { headers: serviceHeaders }
     );
-    if (!seekerRes.ok) throw new Error("failed to fetch seeker");
+    if (!seekerRes.ok) throw new Error("failed to fetch seeker: " + seekerRes.status + " " + (await seekerRes.text()));
     const seekers = await seekerRes.json();
     const seeker = seekers && seekers[0];
     const notifyEnabled =
