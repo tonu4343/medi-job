@@ -4,6 +4,8 @@
 // itself (the caller fires this without awaiting failure), so a
 // Resend outage never prevents someone from signing up. Separate from
 // Supabase's own auth confirmation email.
+const { logEmailDelivery } = require("./_lib/email-log");
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ success: false, message: "Method not allowed" });
@@ -28,6 +30,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  const subject = "ご登録ありがとうございます｜Medical Spot Job";
   const greetingName = contactName ? contactName + " 様" : "この度は";
   const facilityLine = facilityName ? "<p>" + facilityName + " 様のご登録を確認いたしました。</p>" : "";
   const html =
@@ -47,21 +50,24 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         from: "Medical Spot Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
         to: [email],
-        subject: "ご登録ありがとうございます｜Medical Spot Job",
+        subject: subject,
         html: html
       })
     });
     if (!resendRes.ok) {
       const errorText = await resendRes.text();
       console.error("Resend employer welcome email failed", errorText);
+      await logEmailDelivery({ type: "employer_welcome", recipient: email, subject, status: "failed", error: errorText });
       res.status(502).json({ success: false, message: "メール送信に失敗しました。" });
       return;
     }
   } catch (error) {
     console.error("Resend employer welcome email threw", error);
+    await logEmailDelivery({ type: "employer_welcome", recipient: email, subject, status: "failed", error: String(error) });
     res.status(502).json({ success: false, message: "メール送信に失敗しました。" });
     return;
   }
 
+  await logEmailDelivery({ type: "employer_welcome", recipient: email, subject, status: "sent" });
   res.status(200).json({ success: true });
 };

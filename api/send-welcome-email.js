@@ -3,6 +3,8 @@
 // blocks the registration flow itself (the caller fires this without
 // awaiting failure), so a Resend outage never prevents someone from
 // signing up.
+const { logEmailDelivery } = require("./_lib/email-log");
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ success: false, message: "Method not allowed" });
@@ -26,6 +28,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  const subject = "ご登録ありがとうございます｜Medical Spot Job";
   const greetingName = name ? name + " 様" : "この度は";
   const html =
     "<p>" + greetingName + "、Medical Spot Jobにご登録いただきありがとうございます。</p>" +
@@ -43,21 +46,24 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         from: "Medical Spot Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
         to: [email],
-        subject: "ご登録ありがとうございます｜Medical Spot Job",
+        subject: subject,
         html: html
       })
     });
     if (!resendRes.ok) {
       const errorText = await resendRes.text();
       console.error("Resend welcome email failed", errorText);
+      await logEmailDelivery({ type: "seeker_welcome", recipient: email, subject, status: "failed", error: errorText });
       res.status(502).json({ success: false, message: "メール送信に失敗しました。" });
       return;
     }
   } catch (error) {
     console.error("Resend welcome email threw", error);
+    await logEmailDelivery({ type: "seeker_welcome", recipient: email, subject, status: "failed", error: String(error) });
     res.status(502).json({ success: false, message: "メール送信に失敗しました。" });
     return;
   }
 
+  await logEmailDelivery({ type: "seeker_welcome", recipient: email, subject, status: "sent" });
   res.status(200).json({ success: true });
 };

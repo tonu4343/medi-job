@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>応募管理 | Medi Job 運営管理者</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#005bac"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="icon" href="assets/icon-32.png">
+  <title>メール送信ログ | Medi Job 運営管理者</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#005bac"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="icon" href="assets/icon-32.png">
   <link rel="stylesheet" href="styles.css">
   <style>
     body.admin-dashboard-page { color: var(--ink); background: #f5f9fc; }
@@ -34,13 +34,24 @@
     .admin-hero h1 { margin: 0 0 8px; color: var(--blue-dark); font-size: clamp(22px,2.6vw,28px); font-weight: 900; }
     .admin-hero p { margin: 0; color: var(--muted); font-size: 13.5px; font-weight: 700; line-height: 1.8; }
 
+    .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 760px) { .stat-strip { grid-template-columns: repeat(2, 1fr); } }
+    .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; box-shadow: 0 10px 24px rgba(0,63,125,.06); }
+    .stat-card .n { font-size: 22px; font-weight: 900; color: var(--blue-dark); font-variant-numeric: tabular-nums; }
+    .stat-card .l { margin-top: 4px; font-size: 11.5px; color: var(--muted); font-weight: 800; }
+    .stat-card.sent .n { color: var(--green-dark); }
+    .stat-card.failed .n { color: #b3261e; }
+    .stat-card.skipped .n { color: #b5670f; }
+
     .panel-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,63,125,.06); padding: 22px; margin-bottom: 20px; }
     .panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
     .panel-head h2 { margin: 0; color: var(--blue-dark); font-size: 17px; font-weight: 900; }
     .panel-head span.count { color: var(--muted); font-size: 12px; font-weight: 800; }
-    .table-search { position: relative; width: min(280px, 100%); }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .table-search { position: relative; width: min(260px, 100%); }
     .table-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 1.8; pointer-events: none; }
     .table-search input { width: 100%; min-height: 38px; padding: 0 12px 0 34px; color: #37566f; background: #fbfdff; border: 1px solid #cfdfe9; border-radius: 8px; font: inherit; font-size: 13px; }
+    select.filter-select { min-height: 38px; padding: 0 10px; color: #37566f; background: #fbfdff; border: 1px solid #cfdfe9; border-radius: 8px; font: inherit; font-size: 13px; }
 
     .admin-table-wrap { overflow-x: auto; }
     table.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -48,12 +59,13 @@
     table.admin-table td { padding: 12px; color: #263949; font-weight: 700; border-bottom: 1px solid #eef3f7; vertical-align: top; }
     table.admin-table tr:last-child td { border-bottom: 0; }
     table.admin-table td.name-cell { color: #14324c; font-weight: 900; white-space: nowrap; }
-    .status-pill { display: inline-flex; align-items: center; min-height: 22px; padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 900; white-space: nowrap; color: var(--blue); background: #edf7ff; border: 1px solid #b9dbf5; }
-    .status-pill.status-selection { color: #b5670f; background: #fff6e9; border-color: #f2cf9c; }
-    .status-pill.status-hired { color: var(--green-dark); background: #ecfff5; border-color: #b8ebcf; }
-    .status-pill.status-working { color: var(--blue); background: #edf7ff; border-color: #b9dbf5; }
-    .status-pill.status-completed { color: #5b6270; background: #eef1f5; border-color: #ccd3dd; }
-    .status-pill.status-rejected { color: #b3261e; background: #fdecea; border-color: #f3b6b0; }
+    table.admin-table td.time-cell { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); }
+    table.admin-table td.error-cell { max-width: 320px; color: #b3261e; font-size: 12px; }
+    .status-pill { display: inline-flex; align-items: center; min-height: 22px; padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 900; white-space: nowrap; }
+    .status-pill.sent { color: var(--green-dark); background: #ecfff5; border: 1px solid #b8ebcf; }
+    .status-pill.failed { color: #b3261e; background: #fdecea; border: 1px solid #f3b6b0; }
+    .status-pill.skipped { color: #b5670f; background: #fff6e9; border: 1px solid #f2cf9c; }
+    .type-tag { display: inline-flex; align-items: center; min-height: 20px; padding: 0 8px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--blue); background: #edf7ff; border: 1px solid #b9dbf5; white-space: nowrap; }
     .table-empty { padding: 30px 18px; text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
 
     .admin-footer-light { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 26px clamp(20px,5vw,64px); background: #fff; border-top: 1px solid var(--line); }
@@ -86,32 +98,56 @@
         <li><a href="admin-seekers.html"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15 20c.2-2.3 1.6-4.2 3.5-5"/></svg>求職者管理</a></li>
         <li><a href="admin-employers.html"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="7" height="13"/><rect x="13" y="3" width="7" height="18"/><line x1="6" y1="11" x2="7" y2="11"/><line x1="6" y1="14" x2="7" y2="14"/><line x1="15" y1="7" x2="18" y2="7"/><line x1="15" y1="11" x2="18" y2="11"/></svg>求人者管理</a></li>
         <li><a href="admin-jobs.html"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>求人管理</a></li>
-        <li><a class="active" href="admin-applications.html"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>応募管理</a></li>
+        <li><a href="admin-applications.html"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>応募管理</a></li>
         <li><a href="admin-payments.html"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>決済管理</a></li>
-        <li><a href="admin-email-logs.html"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>メール送信ログ</a></li>
+        <li><a class="active" href="admin-email-logs.html"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>メール送信ログ</a></li>
         <li><a href="admin-settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>システム設定</a></li>
       </ul>
       <div class="admin-badge-card">
         <strong>運営管理者モード</strong>
-        <span>プラットフォーム全体の応募状況を閲覧のみ行えます。</span>
+        <span>Resend経由で送信されたメールの履歴を確認できます。</span>
       </div>
     </aside>
 
     <main class="dash-main">
       <section class="admin-hero">
-        <h1>応募管理</h1>
-        <p>プラットフォーム全体の応募状況を確認できます。</p>
+        <h1>メール送信ログ</h1>
+        <p>登録・応募・メッセージ・採用通知など、Resendで送信されたすべてのメールの履歴です。</p>
       </section>
+
+      <div class="stat-strip">
+        <div class="stat-card"><div class="n" id="statTotal">-</div><div class="l">合計件数</div></div>
+        <div class="stat-card sent"><div class="n" id="statSent">-</div><div class="l">送信成功</div></div>
+        <div class="stat-card failed"><div class="n" id="statFailed">-</div><div class="l">送信失敗</div></div>
+        <div class="stat-card skipped"><div class="n" id="statSkipped">-</div><div class="l">送信スキップ</div></div>
+      </div>
 
       <section class="panel-card">
         <div class="panel-head">
-          <h2>応募一覧 <span class="count" id="appTableCount"></span></h2>
-          <label class="table-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg><input id="appSearch" type="text" placeholder="求職者名・求人名・施設名で検索"></label>
+          <h2>送信履歴 <span class="count" id="logTableCount"></span></h2>
+          <div class="filter-row">
+            <select class="filter-select" id="typeFilter">
+              <option value="">すべての種類</option>
+              <option value="seeker_welcome">求職者：ウェルカムメール</option>
+              <option value="employer_welcome">求人者：ウェルカムメール</option>
+              <option value="application_confirmation">応募確認</option>
+              <option value="application_alert">新着応募通知</option>
+              <option value="message_notification">メッセージ通知</option>
+              <option value="hiring_notification">採用通知</option>
+            </select>
+            <select class="filter-select" id="statusFilter">
+              <option value="">すべての状態</option>
+              <option value="sent">送信成功</option>
+              <option value="failed">送信失敗</option>
+              <option value="skipped">スキップ</option>
+            </select>
+            <label class="table-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg><input id="logSearch" type="text" placeholder="送信先メールアドレスで検索"></label>
+          </div>
         </div>
         <div class="admin-table-wrap">
           <table class="admin-table">
-            <thead><tr><th>求職者</th><th>資格・職種</th><th>応募求人</th><th>施設名</th><th>状態</th><th>応募日</th></tr></thead>
-            <tbody id="appTableBody"><tr><td colspan="6" class="table-empty">読み込んでいます…</td></tr></tbody>
+            <thead><tr><th>日時</th><th>種類</th><th>送信先</th><th>件名</th><th>状態</th><th>エラー内容</th></tr></thead>
+            <tbody id="logTableBody"><tr><td colspan="6" class="table-empty">読み込んでいます…</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -125,40 +161,74 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="application-status.js"></script>
   <script>
     (function () {
       const config = window.MEDISPOT_SUPABASE || {};
       const configured = config.url && config.anonKey && !config.url.includes("YOUR_PROJECT_ID") && !config.anonKey.includes("YOUR_SUPABASE_ANON_KEY");
       const supabaseClient = configured && window.supabase ? window.supabase.createClient(config.url, config.anonKey) : null;
-      let applications = [];
+      let logs = [];
+
+      const TYPE_LABELS = {
+        seeker_welcome: "求職者：ウェルカムメール",
+        employer_welcome: "求人者：ウェルカムメール",
+        application_confirmation: "応募確認",
+        application_alert: "新着応募通知",
+        message_notification: "メッセージ通知",
+        hiring_notification: "採用通知"
+      };
+      const STATUS_LABELS = { sent: "送信成功", failed: "送信失敗", skipped: "スキップ" };
 
       function text(id, value) { const el = document.getElementById(id); if (el) el.textContent = value || "-"; }
       function esc(value) { return String(value || "").replace(/[&<>\"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]; }); }
       function initial(name) { return (name || "管").trim().charAt(0).toUpperCase() || "管"; }
-      function formatDate(value) { return value ? String(value).slice(0, 10) : "-"; }
+      function formatDateTime(value) {
+        if (!value) return "-";
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+      }
 
-      function renderApplications(rows) {
-        const body = document.getElementById("appTableBody");
-        text("appTableCount", rows.length ? "(" + rows.length + "件)" : "");
-        if (!rows.length) { body.innerHTML = '<tr><td colspan="6" class="table-empty">該当する応募がありません。</td></tr>'; return; }
-        body.innerHTML = rows.map(function (a) {
-          return "<tr><td class=\"name-cell\">" + esc(a.seeker_name || "求職者") + "</td><td>" + esc(a.seeker_profession || "-") + "</td><td>" + esc(a.job_title || "応募求人") + "</td><td>" + esc(a.facility_name || "-") + "</td><td><span class=\"status-pill " + window.MEDISPOT_STATUS.cssClass(a.status) + "\">" + esc(window.MEDISPOT_STATUS.label(a.status)) + "</span></td><td>" + esc(formatDate(a.created_at)) + "</td></tr>";
+      function renderStats(rows) {
+        text("statTotal", String(rows.length));
+        text("statSent", String(rows.filter(function (r) { return r.status === "sent"; }).length));
+        text("statFailed", String(rows.filter(function (r) { return r.status === "failed"; }).length));
+        text("statSkipped", String(rows.filter(function (r) { return r.status === "skipped"; }).length));
+      }
+
+      function renderLogs(rows) {
+        const body = document.getElementById("logTableBody");
+        text("logTableCount", rows.length ? "(" + rows.length + "件)" : "");
+        if (!rows.length) { body.innerHTML = '<tr><td colspan="6" class="table-empty">該当するログがありません。</td></tr>'; return; }
+        body.innerHTML = rows.map(function (r) {
+          return "<tr>"
+            + "<td class=\"time-cell\">" + esc(formatDateTime(r.created_at)) + "</td>"
+            + "<td><span class=\"type-tag\">" + esc(TYPE_LABELS[r.email_type] || r.email_type) + "</span></td>"
+            + "<td class=\"name-cell\">" + esc(r.recipient_email) + "</td>"
+            + "<td>" + esc(r.subject) + "</td>"
+            + "<td><span class=\"status-pill " + esc(r.status) + "\">" + esc(STATUS_LABELS[r.status] || r.status) + "</span></td>"
+            + "<td class=\"error-cell\">" + esc(r.error_message || "-") + "</td>"
+            + "</tr>";
         }).join("");
       }
 
-      function applyFilter(rows, query, fields) {
-        const q = query.trim().toLowerCase();
-        if (!q) return rows;
-        return rows.filter(function (row) { return fields.some(function (field) { return String(row[field] || "").toLowerCase().includes(q); }); });
+      function applyFilters() {
+        const typeVal = document.getElementById("typeFilter").value;
+        const statusVal = document.getElementById("statusFilter").value;
+        const q = document.getElementById("logSearch").value.trim().toLowerCase();
+        const filtered = logs.filter(function (r) {
+          if (typeVal && r.email_type !== typeVal) return false;
+          if (statusVal && r.status !== statusVal) return false;
+          if (q && !String(r.recipient_email || "").toLowerCase().includes(q)) return false;
+          return true;
+        });
+        renderLogs(filtered);
       }
 
-      document.getElementById("appSearch").addEventListener("input", function (event) {
-        renderApplications(applyFilter(applications, event.target.value, ["seeker_name", "job_title", "facility_name"]));
-      });
+      document.getElementById("typeFilter").addEventListener("change", applyFilters);
+      document.getElementById("statusFilter").addEventListener("change", applyFilters);
+      document.getElementById("logSearch").addEventListener("input", applyFilters);
 
       async function load() {
-        if (!supabaseClient) { text("topbarName", "運営管理者"); text("topbarInitial", "管"); renderApplications([]); return; }
+        if (!supabaseClient) { text("topbarName", "運営管理者"); text("topbarInitial", "管"); renderLogs([]); renderStats([]); return; }
         const sessionResult = await supabaseClient.auth.getSession();
         const user = sessionResult.data.session?.user;
         if (!user) { window.location.href = "admin-login.html"; return; }
@@ -168,13 +238,15 @@
         text("topbarName", adminName);
         text("topbarInitial", initial(adminName));
 
-        const appsResult = await supabaseClient.from("seeker_applications").select("seeker_name,seeker_profession,job_title,facility_name,status,created_at").order("created_at", { ascending: false });
-        applications = appsResult.error ? [] : (appsResult.data || []);
-        renderApplications(applications);
+        const logsResult = await supabaseClient.from("email_delivery_logs").select("*").order("created_at", { ascending: false }).limit(500);
+        logs = logsResult.error ? [] : (logsResult.data || []);
+        if (logsResult.error) console.error(logsResult.error);
+        renderStats(logs);
+        renderLogs(logs);
       }
 
       document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "admin-login.html"; });
-      load().catch(function (error) { console.error(error); renderApplications([]); });
+      load().catch(function (error) { console.error(error); renderLogs([]); renderStats([]); });
     })();
   </script>
 <script src="pwa-register.js"></script></body>

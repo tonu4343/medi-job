@@ -10,6 +10,8 @@
 // Duplicate-send protection: each chat "send" click creates exactly
 // one application_messages row, and this function only runs once per
 // row via the Database Webhook - there's no retry/resend path here.
+const { logEmailDelivery } = require("./_lib/email-log");
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(200).json({ success: false, message: "Method not allowed" });
@@ -66,6 +68,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    const subject = "医療機関から新しいメッセージが届きました";
     const seekerRes = await fetch(
       SUPABASE_URL + "/rest/v1/seeker_profiles?user_id=eq." + encodeURIComponent(application.user_id) +
         "&select=email,notification_preferences",
@@ -76,6 +79,7 @@ module.exports = async function handler(req, res) {
     const seeker = seekers && seekers[0];
     const notifyEnabled = !seeker?.notification_preferences || seeker.notification_preferences.email !== false;
     if (!seeker || !seeker.email || !notifyEnabled) {
+      await logEmailDelivery({ type: "message_notification", recipient: seeker?.email || "-", subject, status: "skipped", error: !seeker?.email ? "seeker not found" : "notifications disabled", relatedId: record.application_id });
       res.status(200).json({ success: false, message: "not eligible" });
       return;
     }
@@ -105,12 +109,16 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         from: "Medical Spot Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
         to: [seeker.email],
-        subject: "医療機関から新しいメッセージが届きました",
+        subject: subject,
         html: html
       })
     });
     if (!resendRes.ok) {
-      console.error("Resend message email failed", await resendRes.text());
+      const errorText = await resendRes.text();
+      console.error("Resend message email failed", errorText);
+      await logEmailDelivery({ type: "message_notification", recipient: seeker.email, subject, status: "failed", error: errorText, relatedId: record.application_id });
+    } else {
+      await logEmailDelivery({ type: "message_notification", recipient: seeker.email, subject, status: "sent", relatedId: record.application_id });
     }
   } catch (error) {
     console.error("send-message-email error", error);
