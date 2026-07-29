@@ -452,14 +452,21 @@
 
       function renderHireBanner(apps) {
         const banner = document.getElementById("hireBanner");
-        // Only the moment status is exactly 'hired' - once it moves on
-        // to 勤務中/完了 this naturally stops showing, since the
-        // celebratory announcement is only relevant right when it happens.
-        const hired = (apps || []).find(function (a) { return a.status === "hired"; });
+        // Only the moment status is exactly 'hired' AND it hasn't been
+        // acknowledged yet - once seen once it's dismissed server-side
+        // (seeker_dismiss_hire_banner) so it won't reappear on the next
+        // visit, and it also naturally stops once status moves on to
+        // 勤務中/完了 regardless.
+        const hired = (apps || []).find(function (a) { return a.status === "hired" && !a.hire_banner_seen_at; });
         if (!hired) { banner.style.display = "none"; return; }
         banner.href = "application-detail.html?id=" + encodeURIComponent(hired.id);
         text("hireBannerText", "おめでとうございます！" + (hired.facility_name || "求人先") + "への採用が決定しました");
         banner.style.display = "flex";
+        if (supabaseClient) {
+          supabaseClient.rpc("seeker_dismiss_hire_banner", { p_application_id: hired.id }).then(function (result) {
+            if (result.error) console.error(result.error);
+          });
+        }
       }
 
       function renderApps(apps) {
@@ -547,7 +554,7 @@
         const recentResult = await supabaseClient.from("jobs").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(4);
         renderRecentJobs(recentResult.error ? [] : (recentResult.data || []));
 
-        const appsResult = await supabaseClient.from("seeker_applications").select("id,job_id,job_title,facility_name,status,created_at").eq("user_id", user.id).order("created_at", { ascending: false });
+        const appsResult = await supabaseClient.from("seeker_applications").select("id,job_id,job_title,facility_name,status,created_at,hire_banner_seen_at").eq("user_id", user.id).order("created_at", { ascending: false });
         const apps = appsResult.error ? [] : (appsResult.data || []);
         renderApps(apps);
         renderHireBanner(apps);
