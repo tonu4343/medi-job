@@ -78,6 +78,9 @@
     .notice-banner-text strong { color: #173c5e; font-size: 13.5px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .notice-banner-text time { color: var(--muted); font-size: 11.5px; font-weight: 800; white-space: nowrap; }
     .notice-banner-cta { flex: none; color: var(--green-dark); font-size: 13px; font-weight: 900; white-space: nowrap; }
+    .hire-banner { background: linear-gradient(105deg, #fff8ea, #fff3e0); border-color: #f2cf9c; box-shadow: 0 14px 32px rgba(181,103,15,.12); }
+    .hire-banner .notice-banner-icon { color: #b5670f; border-color: #f2cf9c; }
+    .hire-banner .notice-banner-cta { color: #b5670f; }
 
     .quick-search-panel { margin-bottom: 20px; padding: 22px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,63,125,.06); }
     .quick-search-panel h2 { margin: 0 0 16px; color: var(--blue-dark); font-size: 17px; font-weight: 900; }
@@ -298,6 +301,12 @@
         </div>
       </section>
 
+      <a class="notice-banner hire-banner" id="hireBanner" href="seeker-applications.html" style="display:none;">
+        <span class="notice-banner-icon"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17l-5.9 3 1.2-6.5-4.8-4.6 6.6-.9z"/></svg></span>
+        <span class="notice-banner-text"><strong id="hireBannerText"></strong></span>
+        <span class="notice-banner-cta">詳細を確認 ›</span>
+      </a>
+
       <a class="notice-banner" id="messageBanner" href="seeker-messages.html" style="display:none;">
         <span class="notice-banner-icon"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span>
         <span class="notice-banner-text"><strong id="bannerFrom"></strong><time id="bannerTime"></time></span>
@@ -441,6 +450,18 @@
         }).join("");
       }
 
+      function renderHireBanner(apps) {
+        const banner = document.getElementById("hireBanner");
+        // Only the moment status is exactly 'hired' - once it moves on
+        // to 勤務中/完了 this naturally stops showing, since the
+        // celebratory announcement is only relevant right when it happens.
+        const hired = (apps || []).find(function (a) { return a.status === "hired"; });
+        if (!hired) { banner.style.display = "none"; return; }
+        banner.href = "application-chat.html?id=" + encodeURIComponent(hired.id);
+        text("hireBannerText", "おめでとうございます！" + (hired.facility_name || "求人先") + "への採用が決定しました");
+        banner.style.display = "flex";
+      }
+
       function renderApps(apps) {
         const list = document.getElementById("appsList");
         const inProgress = apps.filter(function (a) { return !window.MEDISPOT_STATUS.isHiredOrLater(a.status); });
@@ -529,6 +550,7 @@
         const appsResult = await supabaseClient.from("seeker_applications").select("id,job_id,job_title,facility_name,status,created_at").eq("user_id", user.id).order("created_at", { ascending: false });
         const apps = appsResult.error ? [] : (appsResult.data || []);
         renderApps(apps);
+        renderHireBanner(apps);
         loadMessagePreview(user, apps).catch(function (error) { console.error(error); });
         loadNoticesBadge(profile).catch(function (error) { console.error(error); });
       }
