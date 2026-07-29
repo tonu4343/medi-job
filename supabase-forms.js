@@ -221,6 +221,13 @@
     }
 
     showMessage("formMessage", "\u767b\u9332\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f\u3002\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3078\u79fb\u52d5\u3057\u307e\u3059\u3002", false);
+    // Fire-and-forget: a welcome-email outage must never block or delay
+    // the registration flow itself, so this isn't awaited before the redirect.
+    fetch("/api/send-welcome-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, name })
+    }).catch(function (error) { console.error(error); });
     setTimeout(function () {
       window.location.href = "login.html?role=seeker&registered=1";
     }, 900);
