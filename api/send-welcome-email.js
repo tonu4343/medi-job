@@ -28,10 +28,10 @@ module.exports = async function handler(req, res) {
 
   const greetingName = name ? name + " 様" : "この度は";
   const html =
-    "<p>" + greetingName + "、Medi Jobにご登録いただきありがとうございます。</p>" +
+    "<p>" + greetingName + "、Medical Spot Jobにご登録いただきありがとうございます。</p>" +
     "<p>プロフィールを充実させて、あなたに合った求人を見つけましょう。</p>" +
     "<p><a href=\"https://medispotjob.vercel.app/seeker-dashboard.html\">マイページへ移動する</a></p>" +
-    "<p>Medi Job 運営事務局</p>";
+    "<p>Medical Spot Job 運営事務局</p>";
 
   try {
     const resendRes = await fetch("https://api.resend.com/emails", {
@@ -41,9 +41,9 @@ module.exports = async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "Medi Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
+        from: "Medical Spot Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
         to: [email],
-        subject: "Medi Jobへようこそ",
+        subject: "ご登録ありがとうございます｜Medical Spot Job",
         html: html
       })
     });
