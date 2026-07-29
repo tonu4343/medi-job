@@ -504,15 +504,26 @@
         document.getElementById("heroStatMessages").innerHTML = unread + "<small>件</small>";
         const badge = document.getElementById("unreadBadge");
         const sideBadge = document.getElementById("sideMsgBadge");
-        if (unread > 0) { badge.hidden = false; badge.textContent = String(unread); sideBadge.hidden = false; sideBadge.textContent = String(unread); }
-        const latest = messages.find(function (m) { return m.sender_id !== user.id; });
-        if (latest) {
-          const app = apps.find(function (a) { return a.id === latest.application_id; }) || {};
-          const banner = document.getElementById("messageBanner");
-          banner.href = "application-chat.html?id=" + encodeURIComponent(latest.application_id);
-          text("bannerFrom", (app.facility_name || "医療機関") + "からメッセージが届いています");
-          text("bannerTime", latest.created_at ? new Date(latest.created_at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
-          banner.style.display = "flex";
+        const banner = document.getElementById("messageBanner");
+        if (unread > 0) { badge.hidden = false; badge.textContent = String(unread); sideBadge.hidden = false; sideBadge.textContent = String(unread); } else { badge.hidden = true; sideBadge.hidden = true; }
+        // Only the last 5 messages are fetched above for the preview list, so an
+        // unread message can exist without being in that window (e.g. it's in a
+        // less-recently-active conversation). Query read_at directly instead of
+        // reusing `messages`, so the banner always reflects real unread state.
+        if (unread > 0) {
+          const latestUnreadResult = await supabaseClient.from("application_messages").select("application_id,created_at").in("application_id", appIds).neq("sender_id", user.id).is("read_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
+          const latest = latestUnreadResult.error ? null : latestUnreadResult.data;
+          if (latest) {
+            const app = apps.find(function (a) { return a.id === latest.application_id; }) || {};
+            banner.href = "application-chat.html?id=" + encodeURIComponent(latest.application_id);
+            text("bannerFrom", (app.facility_name || "医療機関") + "からメッセージが届いています");
+            text("bannerTime", latest.created_at ? new Date(latest.created_at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
+            banner.style.display = "flex";
+          } else {
+            banner.style.display = "none";
+          }
+        } else {
+          banner.style.display = "none";
         }
       }
 
