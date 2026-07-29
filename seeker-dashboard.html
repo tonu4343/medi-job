@@ -457,7 +457,7 @@
         // celebratory announcement is only relevant right when it happens.
         const hired = (apps || []).find(function (a) { return a.status === "hired"; });
         if (!hired) { banner.style.display = "none"; return; }
-        banner.href = "application-chat.html?id=" + encodeURIComponent(hired.id);
+        banner.href = "application-detail.html?id=" + encodeURIComponent(hired.id);
         text("hireBannerText", "おめでとうございます！" + (hired.facility_name || "求人先") + "への採用が決定しました");
         banner.style.display = "flex";
       }

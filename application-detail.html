@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>応募詳細 | Medical Spot Job</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#005bac"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="icon" href="assets/icon-32.png">
+<link rel="stylesheet" href="styles.css">
+<style>
+body.detail-page{background:linear-gradient(180deg,#f4faff,#fff 52%,#f2faf8);color:var(--ink)}
+.detail-shell{width:min(880px,calc(100% - 40px));margin:auto;padding:34px 0 70px}
+.detail-card{overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 46px rgba(0,63,125,.1);margin-bottom:20px}
+.detail-head{display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap;padding:22px 24px;background:linear-gradient(105deg,#f2f9ff,#effff6);border-bottom:1px solid #d9e8f2}
+.detail-head h1{margin:5px 0;color:var(--blue-dark);font-size:22px}
+.detail-head p{margin:0;color:var(--muted);font-size:12px;font-weight:800}
+.status{display:inline-flex;min-height:26px;align-items:center;padding:0 11px;color:var(--blue);background:#fff;border:1px solid #b9dbf5;border-radius:999px;font-size:11px;font-weight:900}
+.status.status-selection{color:#b5670f;background:#fff6e9;border-color:#f2cf9c}
+.status.status-hired{color:var(--green-dark);background:#ecfff5;border-color:#b8ebcf}
+.status.status-working{color:var(--blue);background:#edf7ff;border-color:#b9dbf5}
+.status.status-completed{color:#5b6270;background:#eef1f5;border-color:#ccd3dd}
+.status.status-rejected{color:#b3261e;background:#fdecea;border-color:#f3b6b0}
+
+.stepper{display:flex;padding:26px 24px 6px;gap:0}
+.step{flex:1;position:relative;text-align:center;font-size:11.5px;font-weight:800;color:var(--muted)}
+.step::before{content:"";position:absolute;top:12px;left:-50%;width:100%;height:2px;background:#e1eef8;z-index:0}
+.step:first-child::before{display:none}
+.step-dot{position:relative;z-index:1;display:grid;place-items:center;width:26px;height:26px;margin:0 auto 8px;border-radius:50%;background:#eef3f7;color:var(--muted);font-size:12px;font-weight:900}
+.step.done .step-dot{background:var(--green);color:#fff}
+.step.done::before{background:var(--green)}
+.step.current .step-dot{background:var(--blue);color:#fff;box-shadow:0 0 0 4px rgba(0,91,172,.14)}
+.step.current{color:var(--blue-dark)}
+.closed-note{margin:0 24px 20px;padding:12px 14px;color:#9d2d24;background:#fff2f0;border:1px solid #f1bbb5;border-radius:8px;font-size:12.5px;font-weight:800}
+
+.detail-body{padding:22px 24px}
+.detail-section+.detail-section{margin-top:22px;padding-top:22px;border-top:1px solid #eef3f7}
+.detail-section h2{margin:0 0 14px;color:var(--blue-dark);font-size:14.5px;font-weight:900}
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 20px}
+.info-grid dt{color:var(--muted);font-size:11px;font-weight:800;margin-bottom:3px}
+.info-grid dd{margin:0;color:#263949;font-size:13.5px;font-weight:700;white-space:pre-wrap}
+.info-grid .full{grid-column:1/-1}
+.detail-actions{display:flex;gap:10px;padding:0 24px 24px}
+.empty-note{padding:30px 18px;text-align:center;color:var(--muted);font-size:13px;font-weight:700}
+@media(max-width:680px){.site-header{flex-wrap:wrap}.detail-shell{width:calc(100% - 24px);padding-top:18px}.detail-head{align-items:flex-start;flex-direction:column}.info-grid{grid-template-columns:1fr}.stepper{overflow-x:auto}.step{min-width:78px}}
+</style>
+</head>
+<body class="detail-page">
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="brand-mark"><span></span></span><span class="brand-text"><strong>Medical Spot Job</strong><small aria-hidden="true"></small></span></a>
+  <button class="btn btn-outline" id="logoutButton" type="button">ログアウト</button>
+</header>
+<main class="detail-shell">
+  <article class="detail-card" id="detailCard">
+    <header class="detail-head">
+      <div><span class="status" id="applicationStatus">読み込み中</span><h1 id="jobTitle">応募詳細</h1><p id="facilitySub">応募情報を確認しています…</p></div>
+    </header>
+    <div class="stepper" id="stepper" hidden></div>
+    <div class="closed-note" id="closedNote" hidden></div>
+    <div class="detail-body" id="detailBody" hidden>
+      <section class="detail-section">
+        <h2>求人情報</h2>
+        <dl class="info-grid">
+          <div><dt>職種</dt><dd id="infoCategory">-</dd></div>
+          <div><dt>雇用形態</dt><dd id="infoType">-</dd></div>
+          <div><dt>勤務地</dt><dd id="infoLocation">-</dd></div>
+          <div><dt>勤務日</dt><dd id="infoWorkDate">-</dd></div>
+          <div><dt>給与</dt><dd id="infoSalary">-</dd></div>
+          <div class="full"><dt>業務内容</dt><dd id="infoDescription">-</dd></div>
+        </dl>
+      </section>
+      <section class="detail-section">
+        <h2>施設情報</h2>
+        <dl class="info-grid">
+          <div class="full"><dt>施設名</dt><dd id="infoFacility">-</dd></div>
+        </dl>
+      </section>
+      <section class="detail-section">
+        <h2>応募情報</h2>
+        <dl class="info-grid">
+          <div><dt>応募日</dt><dd id="infoAppliedAt">-</dd></div>
+        </dl>
+      </section>
+    </div>
+    <div class="empty-note" id="emptyNote" hidden></div>
+  </article>
+  <div class="detail-actions" id="detailActions" hidden>
+    <a class="btn btn-blue" id="chatLink" href="#">チャットを開く</a>
+    <a class="btn btn-outline" href="seeker-applications.html">応募一覧に戻る</a>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="account-guard.js"></script>
+<script src="application-status.js"></script>
+<script>
+(function () {
+  const config = window.MEDISPOT_SUPABASE || {};
+  const configured = config.url && config.anonKey && !config.url.includes("YOUR_PROJECT_ID") && !config.anonKey.includes("YOUR_SUPABASE_ANON_KEY");
+  const client = configured && window.supabase ? window.supabase.createClient(config.url, config.anonKey) : null;
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+
+  const STEPS = [
+    { key: "applied", label: "応募済み" },
+    { key: "screening", label: "選考中" },
+    { key: "offer_pending", label: "採用承諾待ち" },
+    { key: "hired", label: "採用決定" },
+    { key: "working", label: "勤務中" },
+    { key: "completed", label: "完了" }
+  ];
+
+  function text(id, value) { const el = document.getElementById(id); if (el) el.textContent = value || "-"; }
+  function esc(value) { return String(value || "").replace(/[&<>\"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]; }); }
+
+  function renderStepper(status) {
+    const stepper = document.getElementById("stepper");
+    const closedNote = document.getElementById("closedNote");
+    const idx = STEPS.findIndex(function (s) { return s.key === status; });
+    if (idx === -1) {
+      // rejected / withdrawn / cancelled - a branch exit, not a point
+      // on the linear pipeline, so show a note instead of a stepper.
+      stepper.hidden = true;
+      closedNote.hidden = false;
+      closedNote.textContent = "この応募は" + window.MEDISPOT_STATUS.label(status) + "として終了しています。";
+      return;
+    }
+    closedNote.hidden = true;
+    stepper.hidden = false;
+    stepper.innerHTML = STEPS.map(function (s, i) {
+      const cls = i < idx ? "done" : i === idx ? "current" : "";
+      return '<div class="step ' + cls + '"><span class="step-dot">' + (i < idx ? "✓" : i + 1) + '</span>' + esc(s.label) + '</div>';
+    }).join("");
+  }
+
+  async function load() {
+    if (!client) { document.getElementById("emptyNote").hidden = false; text("emptyNote", "プレビュー環境では応募詳細を表示できません。"); return; }
+    const sessionResult = await client.auth.getSession();
+    const user = sessionResult.data.session?.user;
+    if (!user) { window.location.href = "login.html?role=seeker"; return; }
+    if (!(await window.MEDISPOT_ACCOUNT_GUARD.check(client, user, "seeker"))) return;
+
+    if (!id) {
+      document.getElementById("emptyNote").hidden = false;
+      text("emptyNote", "応募IDが指定されていません。応募管理から開いてください。");
+      return;
+    }
+
+    const appResult = await client.from("seeker_applications").select("*").eq("id", id).eq("user_id", user.id).maybeSingle();
+    if (appResult.error || !appResult.data) {
+      console.error(appResult.error);
+      document.getElementById("emptyNote").hidden = false;
+      text("emptyNote", "応募情報を読み込めませんでした。");
+      return;
+    }
+    const application = appResult.data;
+
+    text("jobTitle", application.job_title || "応募求人");
+    text("facilitySub", application.facility_name || "医療機関");
+    const badge = document.getElementById("applicationStatus");
+    badge.textContent = window.MEDISPOT_STATUS.label(application.status);
+    badge.className = "status " + window.MEDISPOT_STATUS.cssClass(application.status);
+    renderStepper(application.status);
+
+    text("infoFacility", application.facility_name);
+    text("infoAppliedAt", application.created_at ? new Date(application.created_at).toLocaleString("ja-JP") : "-");
+
+    if (application.job_id) {
+      const jobResult = await client.from("jobs").select("category,type,location,work_date,salary,description").eq("id", application.job_id).maybeSingle();
+      const job = jobResult.error ? null : jobResult.data;
+      if (job) {
+        text("infoCategory", job.category);
+        text("infoType", job.type);
+        text("infoLocation", job.location);
+        text("infoWorkDate", job.work_date);
+        text("infoSalary", job.salary);
+        text("infoDescription", job.description);
+      }
+    }
+
+    document.getElementById("detailBody").hidden = false;
+    const actions = document.getElementById("detailActions");
+    if (window.MEDISPOT_STATUS.isChatOpen(application.status)) {
+      document.getElementById("chatLink").href = "application-chat.html?id=" + encodeURIComponent(application.id);
+      actions.hidden = false;
+    } else {
+      document.getElementById("chatLink").style.display = "none";
+      actions.hidden = false;
+    }
+  }
+
+  document.getElementById("logoutButton").addEventListener("click", async function () { if (client) await client.auth.signOut(); window.location.href = "login.html"; });
+  load().catch(function (error) { console.error(error); document.getElementById("emptyNote").hidden = false; text("emptyNote", "応募情報を読み込めませんでした。"); });
+})();
+</script>
+<script src="pwa-register.js"></script></body>
+</html>
