@@ -42,7 +42,13 @@ module.exports = async function handler(req, res) {
     "Content-Type": "application/json"
   };
 
-  function notifyEnabled(prefs) {
+  // Employer preferences now use one flag per category (new_message_email);
+  // seeker preferences still use the older category+channel pair
+  // (messages/email) - seeker_profiles wasn't part of this change.
+  function employerNotifyEnabled(prefs) {
+    return !prefs || prefs.new_message_email !== false;
+  }
+  function seekerNotifyEnabled(prefs) {
     return !prefs || (prefs.messages !== false && prefs.email !== false);
   }
 
@@ -80,7 +86,7 @@ module.exports = async function handler(req, res) {
       if (!employerRes.ok) throw new Error("failed to fetch employer: " + employerRes.status + " " + (await employerRes.text()));
       const employers = await employerRes.json();
       const employer = employers && employers[0];
-      if (employer && employer.email && notifyEnabled(employer.notification_preferences)) {
+      if (employer && employer.email && employerNotifyEnabled(employer.notification_preferences)) {
         const html =
           "<p>" + jobTitle + " の応募について、求職者から新しいメッセージが届きました。</p>" +
           "<p>受信日時: " + sentAt + "</p>" +
@@ -115,7 +121,7 @@ module.exports = async function handler(req, res) {
       if (!seekerRes.ok) throw new Error("failed to fetch seeker: " + seekerRes.status + " " + (await seekerRes.text()));
       const seekers = await seekerRes.json();
       const seeker = seekers && seekers[0];
-      if (seeker && seeker.email && notifyEnabled(seeker.notification_preferences)) {
+      if (seeker && seeker.email && seekerNotifyEnabled(seeker.notification_preferences)) {
         const html =
           "<p>" + facilityName + "（" + jobTitle + "）から新しいメッセージが届きました。</p>" +
           "<p>受信日時: " + sentAt + "</p>" +

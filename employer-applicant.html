@@ -293,6 +293,11 @@
         const appResult = await supabaseClient.from("seeker_applications").select("*").eq("id", appId).eq("employer_id", currentUser.id).maybeSingle();
         if (appResult.error || !appResult.data) { console.error(appResult.error); message("応募情報を読み込めませんでした。この応募者はあなたの求人への応募者ではない可能性があります。", true); return; }
         fillApplication(appResult.data);
+        // Marks the dashboard's "new application" banner as seen - a
+        // no-op if already seen (the RPC only ever sets it once).
+        supabaseClient.rpc("employer_mark_application_seen", { p_application_id: appResult.data.id }).then(function (result) {
+          if (result.error) console.error(result.error);
+        });
 
         const [profileResult, resumeResult] = await Promise.all([
           supabaseClient.from("seeker_profiles").select("*").eq("user_id", appResult.data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),

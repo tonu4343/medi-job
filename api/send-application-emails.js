@@ -84,10 +84,7 @@ module.exports = async function handler(req, res) {
       if (!employerRes.ok) throw new Error("failed to fetch employer: " + employerRes.status + " " + (await employerRes.text()));
       const employers = await employerRes.json();
       const employer = employers && employers[0];
-      const notifyEnabled =
-        !employer?.notification_preferences ||
-        (employer.notification_preferences.new_applications !== false &&
-          employer.notification_preferences.email !== false);
+      const notifyEnabled = !employer?.notification_preferences || employer.notification_preferences.new_application_email !== false;
 
       if (employer && employer.email && notifyEnabled) {
         const employerHtml =
