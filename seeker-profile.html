@@ -135,7 +135,7 @@
           <input class="input" id="skillOther" placeholder="その他の内容を入力してください" style="display:none; margin-top:10px;">
           <div class="form-grid" style="margin-top:22px;">
             <div class="field"><label for="preferredStyle">希望雇用形態</label><select class="input" id="preferredStyle"><option>こだわらない</option><option>スポット</option><option>パート</option><option>業務委託</option><option>非常勤</option></select></div>
-            <div class="field"><label>希望勤務地（首都圏・複数選択可）</label><div class="location-check-grid" id="preferredAreaGrid"><label class="location-check-pill"><input type="checkbox" value="東京都"><span>東京都</span></label><label class="location-check-pill"><input type="checkbox" value="神奈川県"><span>神奈川県</span></label><label class="location-check-pill"><input type="checkbox" value="千葉県"><span>千葉県</span></label><label class="location-check-pill"><input type="checkbox" value="埼玉県"><span>埼玉県</span></label></div></div>
+            <div class="field"><label for="preferredArea">希望勤務地（首都圏・複数選択可）</label><select class="input" id="preferredArea" multiple size="4"><option value="東京都">東京都</option><option value="神奈川県">神奈川県</option><option value="千葉県">千葉県</option><option value="埼玉県">埼玉県</option></select><span class="hint">Ctrl（Macは⌘）を押しながらクリックで複数選択できます。</span></div>
             <div class="field"><label for="employmentStatus">現在の就業状況</label><select class="input" id="employmentStatus"><option value="">選択してください</option><option>就業中（転職・副業を検討中）</option><option>就業中（スポット・単発を希望）</option><option>離職中（すぐに就業可能）</option><option>離職中（就業準備中）</option></select></div>
             <div class="field"><label for="commuteMethod">通勤方法</label><select class="input" id="commuteMethod"><option value="">選択してください</option><option>電車</option><option>バス</option><option>車</option><option>バイク</option><option>自転車</option><option>徒歩</option><option>その他</option></select></div>
             <div class="field"><label for="nearestStation">最寄り駅</label><input class="input" id="nearestStation" placeholder="例）新宿駅"></div>
@@ -214,11 +214,11 @@
         return checked.filter(v => v !== SKILL_OTHER).concat(checked.includes(SKILL_OTHER) ? [otherText ? SKILL_OTHER + '：' + otherText : SKILL_OTHER] : []);
       }
       function selectedLocations() {
-        return Array.from(el('preferredAreaGrid').querySelectorAll('input:checked')).map(input => input.value);
+        return Array.from(el('preferredArea').selectedOptions).map(option => option.value);
       }
       function setLocations(saved) {
         const set = new Set(Array.isArray(saved) ? saved : (saved ? [saved] : []));
-        el('preferredAreaGrid').querySelectorAll('input').forEach(input => { input.checked = set.has(input.value); });
+        Array.from(el('preferredArea').options).forEach(option => { option.selected = set.has(option.value); });
       }
       function computeAge(dateStr) {
         if (!dateStr) return null;

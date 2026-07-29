@@ -463,14 +463,6 @@ img { display: block; max-width: 100%; }
 .story-grid span::first-letter { color: var(--green-dark); }
 .story-grid p { position: relative; margin: 0; color: #334e66; font-size: 13px; font-weight: 700; line-height: 1.7; }
 
-.location-check-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-.location-check-pill { position: relative; display: inline-flex; cursor: pointer; }
-.location-check-pill input { position: absolute; opacity: 0; }
-.location-check-pill span { display: inline-flex; align-items: center; min-height: 38px; padding: 0 15px; color: var(--blue-dark); background: #fff; border: 1px solid #cbdce8; border-radius: 999px; font-size: 14px; font-weight: 900; }
-.location-check-pill input:checked + span { color: var(--green-dark); border-color: #7ed5a0; background: #effdf6; box-shadow: 0 8px 20px rgba(33,183,97,.12); }
-.location-check-grid.compact { gap: 6px; }
-.location-check-grid.compact .location-check-pill span { min-height: 28px; padding: 0 9px; font-size: 11px; }
-
 .faq { padding-top: 8px; background: linear-gradient(180deg, #fff, #f7fbff); }
 .faq details { width: min(1060px, 100%); margin: 0 auto; background: #fff; border: 1px solid var(--line); border-bottom: 0; }
 .faq details:first-of-type { border-radius: 8px 8px 0 0; }
