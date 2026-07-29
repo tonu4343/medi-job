@@ -320,6 +320,15 @@
 
     const hasSession = Boolean(authData?.session || recoveredSession);
     showMessage("formMessage", hasSession ? "登録が完了しました。求人作成画面へ移動します。" : "登録が完了しました。メール確認後にログインしてください。", false);
+    // Fire-and-forget: a welcome-email outage must never block or delay
+    // the registration flow itself, so this isn't awaited before the
+    // redirect. Only reached once both the account and employer_profiles
+    // row are confirmed saved (every earlier failure path returns above).
+    fetch("/api/send-employer-welcome-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, contactName, facilityName })
+    }).catch(function (error) { console.error(error); });
     setTimeout(function () {
       window.location.href = hasSession ? "employer-job-new.html?registered=1" : "login.html?role=employer&registered=1";
     }, 900);

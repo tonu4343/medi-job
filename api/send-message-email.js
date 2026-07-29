@@ -1,10 +1,15 @@
-// Vercel serverless function: emails whichever side (seeker or
-// employer) did NOT send a new chat message. Called by a Supabase
-// Database Webhook on INSERT of application_messages (configured in
-// the Supabase dashboard, not in code) - never called directly by the
-// browser, so there's no client-supplied identity to verify; the
-// webhook payload's row data is trusted the same way the LINE push
-// functions trust it.
+// Vercel serverless function: emails the seeker when an employer
+// sends a new chat message. Called by a Supabase Database Webhook on
+// INSERT of application_messages (configured in the Supabase
+// dashboard, not in code) - never called directly by the browser, so
+// there's no client-supplied identity to verify; the webhook
+// payload's row data is trusted the same way the LINE push functions
+// trust it. Intentionally one-directional: the employer is never
+// emailed about the seeker's own messages.
+//
+// Duplicate-send protection: each chat "send" click creates exactly
+// one application_messages row, and this function only runs once per
+// row via the Database Webhook - there's no retry/resend path here.
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(200).json({ success: false, message: "Method not allowed" });
@@ -39,14 +44,10 @@ module.exports = async function handler(req, res) {
     "Content-Type": "application/json"
   };
 
-  function notifyEnabled(prefs) {
-    return !prefs || (prefs.messages !== false && prefs.email !== false);
-  }
-
   try {
     const applicationRes = await fetch(
       SUPABASE_URL + "/rest/v1/seeker_applications?id=eq." + encodeURIComponent(record.application_id) +
-        "&select=user_id,employer_id,job_title,facility_name",
+        "&select=user_id,job_title,facility_name",
       { headers: serviceHeaders }
     );
     if (!applicationRes.ok) throw new Error("failed to fetch application");
@@ -57,73 +58,59 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const senderIsSeeker = record.sender_id === application.user_id;
-    const jobTitle = application.job_title || application.facility_name || "応募";
-    // A short, safe preview only - never the full message, and never
-    // any other personal detail beyond what's already in the message
-    // text itself (which the sender chose to write here).
-    const preview = String(record.body || "").slice(0, 80).replace(/</g, "&lt;");
-    const chatUrl = "https://medispotjob.vercel.app/application-chat.html?id=" + encodeURIComponent(record.application_id);
-
-    let recipientEmail = null;
-    let subject = null;
-    let html = null;
-
-    if (senderIsSeeker) {
-      // Notify the employer.
-      const employerRes = await fetch(
-        SUPABASE_URL + "/rest/v1/employer_profiles?user_id=eq." + encodeURIComponent(application.employer_id) +
-          "&select=email,notification_preferences",
-        { headers: serviceHeaders }
-      );
-      if (!employerRes.ok) throw new Error("failed to fetch employer");
-      const employers = await employerRes.json();
-      const employer = employers && employers[0];
-      if (employer && employer.email && notifyEnabled(employer.notification_preferences)) {
-        recipientEmail = employer.email;
-        subject = "【Medical Spot Job】求職者から新しいメッセージが届いています";
-        html =
-          "<p>" + jobTitle + " の応募について、求職者から新しいメッセージが届いています。</p>" +
-          "<blockquote>" + preview + "</blockquote>" +
-          "<p><a href=\"" + chatUrl + "\">アプリで確認する</a></p>";
-      }
-    } else {
-      // Notify the seeker.
-      const seekerRes = await fetch(
-        SUPABASE_URL + "/rest/v1/seeker_profiles?user_id=eq." + encodeURIComponent(application.user_id) +
-          "&select=email,notification_preferences",
-        { headers: serviceHeaders }
-      );
-      if (!seekerRes.ok) throw new Error("failed to fetch seeker");
-      const seekers = await seekerRes.json();
-      const seeker = seekers && seekers[0];
-      if (seeker && seeker.email && notifyEnabled(seeker.notification_preferences)) {
-        recipientEmail = seeker.email;
-        subject = "【Medical Spot Job】求人者から新しいメッセージが届いています";
-        html =
-          "<p>" + jobTitle + " の応募について、求人者から新しいメッセージが届いています。</p>" +
-          "<blockquote>" + preview + "</blockquote>" +
-          "<p><a href=\"" + chatUrl + "\">アプリで確認する</a></p>";
-      }
+    // Only notify when the employer sent it - never email the employer
+    // about their own message, and never email the seeker about their
+    // own message either.
+    if (record.sender_id === application.user_id) {
+      res.status(200).json({ success: false, message: "sender is the seeker" });
+      return;
     }
 
-    if (recipientEmail) {
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + RESEND_API_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          from: "Medical Spot Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
-          to: [recipientEmail],
-          subject: subject,
-          html: html
-        })
-      });
-      if (!resendRes.ok) {
-        console.error("Resend message email failed", await resendRes.text());
-      }
+    const seekerRes = await fetch(
+      SUPABASE_URL + "/rest/v1/seeker_profiles?user_id=eq." + encodeURIComponent(application.user_id) +
+        "&select=email,notification_preferences",
+      { headers: serviceHeaders }
+    );
+    if (!seekerRes.ok) throw new Error("failed to fetch seeker");
+    const seekers = await seekerRes.json();
+    const seeker = seekers && seekers[0];
+    const notifyEnabled = !seeker?.notification_preferences || seeker.notification_preferences.email !== false;
+    if (!seeker || !seeker.email || !notifyEnabled) {
+      res.status(200).json({ success: false, message: "not eligible" });
+      return;
+    }
+
+    const facilityName = application.facility_name || "医療機関";
+    const jobTitle = application.job_title || "求人";
+    // A short, safe, escaped preview only - the full conversation stays
+    // inside the app; this email exists purely to notify, not to relay
+    // the message content itself.
+    const preview = String(record.body || "")
+      .slice(0, 80)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    const messagesUrl = "https://medispotjob.vercel.app/seeker-messages.html";
+    const html =
+      "<p>" + facilityName + "（" + jobTitle + "）から新しいメッセージが届きました。</p>" +
+      "<blockquote>" + preview + "</blockquote>" +
+      "<p><a href=\"" + messagesUrl + "\" style=\"display:inline-block;padding:10px 20px;color:#fff;background:#005bac;border-radius:6px;text-decoration:none;\">メッセージを確認する</a></p>";
+
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + RESEND_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Medical Spot Job <noreply@" + RESEND_EMAIL_DOMAIN + ">",
+        to: [seeker.email],
+        subject: "医療機関から新しいメッセージが届きました",
+        html: html
+      })
+    });
+    if (!resendRes.ok) {
+      console.error("Resend message email failed", await resendRes.text());
     }
   } catch (error) {
     console.error("send-message-email error", error);
