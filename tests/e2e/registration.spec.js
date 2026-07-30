@@ -20,7 +20,10 @@ test.describe("Seeker registration", () => {
     await page.locator('input[type="checkbox"]').check();
     await page.locator('button[type="submit"]').click();
 
-    await expect(page).toHaveURL(/login\.html\?role=seeker&registered=1/, { timeout: 10000 });
+    await expect(page).toHaveURL(/login\.html/, { timeout: 10000 });
+    // login.html strips its one-time ?registered=1 etc. params after applying
+    // them, so assert on the resulting UI state rather than the URL.
+    await expect(page.locator("#notice")).toContainText("登録が完了しました", { timeout: 10000 });
   });
 
   test("resubmitting the same email after a first success is rejected, not silently re-created", async ({ page }) => {
@@ -38,7 +41,7 @@ test.describe("Seeker registration", () => {
     }
 
     await submit();
-    await expect(page).toHaveURL(/registered=1/, { timeout: 10000 });
+    await expect(page).toHaveURL(/login\.html/, { timeout: 10000 });
 
     await submit();
     await expect(page.locator("#formMessage")).toContainText("すでに登録されています", { timeout: 10000 });
@@ -66,7 +69,7 @@ test.describe("Employer registration", () => {
     await page.locator('input[type="checkbox"]').check();
     await page.locator('button[type="submit"]').click();
 
-    await expect(page).toHaveURL(/(employer-job-new\.html\?registered=1|login\.html\?role=employer&registered=1)/, {
+    await expect(page).toHaveURL(/(employer-job-new\.html\?registered=1|login\.html)/, {
       timeout: 10000
     });
   });

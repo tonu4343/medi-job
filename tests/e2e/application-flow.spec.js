@@ -47,7 +47,7 @@ test.describe("Job posting and application", () => {
     await page.locator("#passwordConfirm").fill(password);
     await page.locator('input[type="checkbox"]').check();
     await page.locator('button[type="submit"]').click();
-    await expect(page).toHaveURL(/(employer-job-new\.html\?registered=1|login\.html\?role=employer&registered=1)/, {
+    await expect(page).toHaveURL(/(employer-job-new\.html\?registered=1|login\.html)/, {
       timeout: 10000
     });
 
@@ -82,7 +82,7 @@ test.describe("Job posting and application", () => {
     await page.locator("#passwordConfirm").fill(password);
     await page.locator('input[type="checkbox"]').check();
     await page.locator('button[type="submit"]').click();
-    await expect(page).toHaveURL(/login\.html\?role=seeker&registered=1/, { timeout: 10000 });
+    await expect(page).toHaveURL(/login\.html/, { timeout: 10000 });
 
     await page.locator("#email").fill(seekerEmail);
     await page.locator("#password").fill(password);
@@ -90,7 +90,7 @@ test.describe("Job posting and application", () => {
     await expect(page).toHaveURL(/seeker-dashboard\.html/, { timeout: 10000 });
 
     await page.goto("/seeker-profile.html");
-    await page.locator("#license").selectOption("看護師");
+    await page.locator('#licenseGrid label:has-text("看護師") input').check();
     await page.locator("#experience").selectOption("3-5年未満");
     await page.locator("#birthDate").fill("1995-01-01");
     await page.locator("#seekerProfileForm button[type='submit']").click();

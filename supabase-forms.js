@@ -198,6 +198,8 @@
       return;
     }
 
+    let recoveredSession = null;
+
     if ((authError && looksAlreadyRegisteredError(authError)) || isDuplicateSignup(authData)) {
       // A pre-existing orphaned account (registered before this trigger
       // existed) may still have no profile row - recover it here.
@@ -207,6 +209,7 @@
         showMessage("formMessage", ALREADY_REGISTERED_MESSAGE, true);
         return;
       }
+      recoveredSession = recovery.session;
       const { error: profileError } = await supabaseClient
         .from("seeker_profiles")
         .insert(Object.assign({ user_id: recovery.user.id }, seekerProfileFields));
@@ -220,7 +223,8 @@
       setBusy(form, false);
     }
 
-    showMessage("formMessage", "\u767b\u9332\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f\u3002\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3078\u79fb\u52d5\u3057\u307e\u3059\u3002", false);
+    const hasSession = Boolean(authData?.session || recoveredSession);
+    showMessage("formMessage", hasSession ? "\u767b\u9332\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f\u3002\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3078\u79fb\u52d5\u3057\u307e\u3059\u3002" : "\u767b\u9332\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f\u3002\u5c4a\u3044\u305f\u78ba\u8a8d\u30e1\u30fc\u30eb\u3092\u958b\u3044\u3066\u8a8d\u8a3c\u3092\u5b8c\u4e86\u3057\u3066\u304b\u3089\u3001\u30ed\u30b0\u30a4\u30f3\u3057\u3066\u304f\u3060\u3055\u3044\u3002", false);
     // Fire-and-forget: a welcome-email outage must never block or delay
     // the registration flow itself, so this isn't awaited before the redirect.
     fetch("/api/send-welcome-email", {
@@ -229,7 +233,7 @@
       body: JSON.stringify({ email, name })
     }).catch(function (error) { console.error(error); });
     setTimeout(function () {
-      window.location.href = "login.html?role=seeker&registered=1";
+      window.location.href = "login.html?role=seeker&registered=1" + (hasSession ? "" : "&confirm=1");
     }, 900);
   }
 
@@ -319,7 +323,7 @@
     }
 
     const hasSession = Boolean(authData?.session || recoveredSession);
-    showMessage("formMessage", hasSession ? "登録が完了しました。求人作成画面へ移動します。" : "登録が完了しました。メール確認後にログインしてください。", false);
+    showMessage("formMessage", hasSession ? "登録が完了しました。求人作成画面へ移動します。" : "登録が完了しました。届いた確認メールを開いて認証を完了してから、ログインしてください。", false);
     // Fire-and-forget: a welcome-email outage must never block or delay
     // the registration flow itself, so this isn't awaited before the
     // redirect. Only reached once both the account and employer_profiles
@@ -330,7 +334,7 @@
       body: JSON.stringify({ email, contactName, facilityName })
     }).catch(function (error) { console.error(error); });
     setTimeout(function () {
-      window.location.href = hasSession ? "employer-job-new.html?registered=1" : "login.html?role=employer&registered=1";
+      window.location.href = hasSession ? "employer-job-new.html?registered=1" : "login.html?role=employer&registered=1&confirm=1";
     }, 900);
   }
   async function saveSearch(form) {

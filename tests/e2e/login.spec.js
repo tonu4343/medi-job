@@ -9,7 +9,7 @@ async function registerSeeker(page, email, password) {
   await page.locator("#passwordConfirm").fill(password);
   await page.locator('input[type="checkbox"]').check();
   await page.locator('button[type="submit"]').click();
-  await expect(page).toHaveURL(/registered=1/, { timeout: 10000 });
+  await expect(page).toHaveURL(/login\.html/, { timeout: 10000 });
 }
 
 test.describe("Login role protection", () => {

@@ -23,10 +23,12 @@
   const roleSwitchLink = document.querySelector("#roleSwitchLink");
   const loginLead = document.querySelector("#loginLead");
   const ROLE_LABEL = { seeker: "求職者", employer: "求人者" };
+  const SUPPORT_EMAIL = "support@medical-branch.jp";
+  const SUPPORT_LINK_HTML = '<a href="mailto:' + SUPPORT_EMAIL + '" style="color:inherit;text-decoration:underline;font-weight:900;">' + SUPPORT_EMAIL + "</a>";
 
-  function showNotice(text, isError) {
+  function showNotice(html, isError) {
     if (!notice) return;
-    notice.textContent = text;
+    notice.innerHTML = html;
     notice.classList.add("show");
     notice.style.color = isError ? "#7c2d12" : "#007a52";
     notice.style.background = isError ? "#fff7ed" : "#ecfdf3";
@@ -74,6 +76,16 @@
     if (lineLoginButton) lineLoginButton.hidden = !isSeeker;
   }
 
+  function setNeutral() {
+    // Neither role is presumed correct: both tabs render identically (no
+    // .active color) and the form requires an explicit pick before submit.
+    tabs.forEach((tab) => tab.classList.remove("active"));
+    if (roleInput) roleInput.value = "";
+    if (submitBtn) submitBtn.classList.remove("employer");
+    if (oauthDivider) oauthDivider.hidden = true;
+    if (lineLoginButton) lineLoginButton.hidden = true;
+  }
+
   tabs.forEach((tab) => tab.addEventListener("click", () => setRole(tab.dataset.role)));
 
   function lockRole(role) {
@@ -89,9 +101,7 @@
   }
 
   function unlockRoles(role) {
-    const url = new URL(window.location.href);
-    url.searchParams.delete("role");
-    window.history.replaceState({}, "", url.pathname + (url.search || "") + url.hash);
+    window.history.replaceState({}, "", window.location.pathname + window.location.hash);
     if (roleTabs) roleTabs.hidden = false;
     if (loginLead) loginLead.textContent = "ログイン種別を選択してください。";
     if (roleSwitchLink) roleSwitchLink.hidden = true;
@@ -127,6 +137,11 @@
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    if (!roleInput.value) {
+      showNotice("求職者・求人者のいずれかを選択してからログインしてください。", true);
+      return;
+    }
 
     if (!supabaseClient) {
       showNotice("ただいまログインをご利用いただけません。しばらくしてから再度お試しください。", true);
@@ -178,8 +193,8 @@
       await supabaseClient.auth.signOut();
       showNotice(
         profileResult.data.account_status === "withdrawn"
-          ? "このアカウントは退会済みです。ご不明な点はサポートまでお問い合わせください。"
-          : "このアカウントは利用停止されています。詳細はサポートまでお問い合わせください。",
+          ? "このアカウントは退会済みです。ご不明な点は" + SUPPORT_LINK_HTML + "までお問い合わせください。"
+          : "このアカウントは利用停止されています。詳細は" + SUPPORT_LINK_HTML + "までお問い合わせください。",
         true
       );
       return;
@@ -192,20 +207,33 @@
   });
 
   const requestedRole = params.get("role") === "employer" ? "employer" : params.get("role") === "seeker" ? "seeker" : null;
-  // roleError means the account type didn't match the requested role, so both
-  // tabs must stay visible for the user to pick the correct one.
-  if (requestedRole && params.get("roleError") !== "1") {
+  const isRoleError = params.get("roleError") === "1";
+  // roleError means the currently logged-in account didn't match the page the
+  // user tried to reach, so neither tab is presumed correct - both stay
+  // visible, unhighlighted, for the user to pick the right one.
+  if (requestedRole && !isRoleError) {
     lockRole(requestedRole);
   } else {
-    setRole(requestedRole || "seeker");
+    setNeutral();
   }
   if (params.get("accountStatus") === "suspended") {
-    showNotice("このアカウントは利用停止されています。詳細はサポートまでお問い合わせください。", true);
+    showNotice("このアカウントは利用停止されています。詳細は" + SUPPORT_LINK_HTML + "までお問い合わせください。", true);
   } else if (params.get("accountStatus") === "withdrawn") {
-    showNotice("このアカウントは退会済みです。ご不明な点はサポートまでお問い合わせください。", true);
-  } else if (params.get("roleError") === "1") {
-    showNotice("アカウント種別が違います。正しいログイン種別を選択してください。", true);
+    showNotice("このアカウントは退会済みです。ご不明な点は" + SUPPORT_LINK_HTML + "までお問い合わせください。", true);
+  } else if (isRoleError) {
+    showNotice("現在ログイン中のアカウントでは、この画面はご利用いただけません。求職者・求人者のうち、正しい種別を選んでログインし直してください。", true);
   } else if (params.get("registered") === "1") {
-    showNotice("登録が完了しました。メール認証が必要な場合は、確認メールを開いてからログインしてください。", false);
+    showNotice(
+      params.get("confirm") === "1"
+        ? "登録が完了しました。届いた確認メールを開いて認証を完了してから、ログインしてください。"
+        : "登録が完了しました。ログインしてください。",
+      false
+    );
+  }
+
+  // These are one-time signals from a redirect - once applied, drop them so
+  // a refresh or bookmark doesn't replay a stale notice or role lock.
+  if (params.toString()) {
+    window.history.replaceState({}, "", window.location.pathname + window.location.hash);
   }
 })();
