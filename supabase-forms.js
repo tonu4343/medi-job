@@ -11,6 +11,12 @@
       ? window.supabase.createClient(config.url, config.anonKey)
       : null;
 
+  // Set once detectAddRoleMode resolves, before either submit handler can
+  // run (the submit button stays disabled until then) - see the bottom of
+  // this file. Non-null means: already logged in, adding this role fresh.
+  let seekerAddRoleUser = null;
+  let employerAddRoleUser = null;
+
   function value(id) {
     return document.getElementById(id)?.value?.trim() || null;
   }
@@ -152,6 +158,37 @@
     return "アカウントを登録できませんでした。入力内容を確認して、もう一度お試しください。";
   }
 
+  // A visitor already logged in under the other role (seeker <-> employer)
+  // can add the second role to that same account instead of needing a
+  // second email. If they already have this role too, just send them to
+  // their dashboard - there's nothing left to register. Otherwise, switch
+  // the form into "add role" mode: email/password aren't needed since
+  // they're already authenticated, so those fields are hidden and their
+  // values come from the existing session, not user input.
+  async function detectAddRoleMode(form, profileTable, dashboardUrl, roleLabel) {
+    if (!supabaseClient) return null;
+    const session = await supabaseClient.auth.getSession();
+    const user = session.data.session?.user;
+    if (!user) return null;
+    const existing = await supabaseClient.from(profileTable).select("id").eq("user_id", user.id).limit(1).maybeSingle();
+    if (existing.data) {
+      showMessage("formMessage", "すでに" + roleLabel + "として登録済みです。マイページへ移動します。", false);
+      setBusy(form, true);
+      setTimeout(function () { window.location.href = dashboardUrl; }, 700);
+      return "redirecting";
+    }
+    const emailField = document.getElementById("email");
+    const emailWrapper = emailField?.closest(".field");
+    if (emailWrapper) emailWrapper.hidden = true;
+    if (emailField) emailField.required = false;
+    form.querySelectorAll(".password-field").forEach(function (wrapper) {
+      wrapper.hidden = true;
+      wrapper.querySelectorAll("input").forEach(function (input) { input.required = false; });
+    });
+    showMessage("formMessage", "ログイン中のアカウント（" + (user.email || "") + "）に" + roleLabel + "情報を追加します。", false);
+    return user;
+  }
+
   async function saveSeeker(event) {
     event.preventDefault();
 
@@ -160,11 +197,13 @@
     const form = event.currentTarget;
     const errors = collectFormErrors(form);
 
-    const password = rawValue("password");
-    const passwordConfirm = rawValue("passwordConfirm");
-    if (password.length >= 8 && passwordConfirm.length >= 8 && password !== passwordConfirm) {
-      errors.push("\u30d1\u30b9\u30ef\u30fc\u30c9\u3068\u78ba\u8a8d\u7528\u30d1\u30b9\u30ef\u30fc\u30c9\u304c\u4e00\u81f4\u3057\u307e\u305b\u3093\u3002");
-      markFieldInvalid(document.getElementById("passwordConfirm"));
+    if (!seekerAddRoleUser) {
+      const password = rawValue("password");
+      const passwordConfirm = rawValue("passwordConfirm");
+      if (password.length >= 8 && passwordConfirm.length >= 8 && password !== passwordConfirm) {
+        errors.push("\u30d1\u30b9\u30ef\u30fc\u30c9\u3068\u78ba\u8a8d\u7528\u30d1\u30b9\u30ef\u30fc\u30c9\u304c\u4e00\u81f4\u3057\u307e\u305b\u3093\u3002");
+        markFieldInvalid(document.getElementById("passwordConfirm"));
+      }
     }
 
     if (errors.length) {
@@ -174,7 +213,8 @@
 
     setBusy(form, true);
 
-    const email = value("email");
+    const email = seekerAddRoleUser ? seekerAddRoleUser.email : value("email");
+    const password = rawValue("password");
     const name = [value("lastName"), value("firstName")].filter(Boolean).join(" ") || value("name");
     const seekerProfileFields = {
       name,
@@ -189,6 +229,22 @@
       pr: value("pr"),
       source_path: window.location.pathname
     };
+
+    if (seekerAddRoleUser) {
+      const { error: profileError } = await supabaseClient
+        .from("seeker_profiles")
+        .insert(Object.assign({ user_id: seekerAddRoleUser.id }, seekerProfileFields));
+      setBusy(form, false);
+      if (profileError) {
+        console.error(profileError);
+        showMessage("formMessage", "\u6c42\u8077\u8005\u60c5\u5831\u3092\u4fdd\u5b58\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f\u3002" + (profileError.message ? "\uff08" + profileError.message + "\uff09" : ""), true);
+        return;
+      }
+      markHasAccount();
+      showMessage("formMessage", "\u6c42\u8077\u8005\u60c5\u5831\u3092\u8ffd\u52a0\u3057\u307e\u3057\u305f\u3002\u30de\u30a4\u30da\u30fc\u30b8\u3078\u79fb\u52d5\u3057\u307e\u3059\u3002", false);
+      setTimeout(function () { window.location.href = "seeker-dashboard.html"; }, 900);
+      return;
+    }
 
     // public.handle_new_profile() (a trigger on auth.users) creates the
     // seeker_profiles row in the same transaction as the account, using
@@ -218,7 +274,13 @@
       const recovery = await tryRecoverOrphanedAccount(email, password, "seeker_profiles");
       if (!recovery || recovery.profileExists) {
         setBusy(form, false);
-        showMessage("formMessage", ALREADY_REGISTERED_MESSAGE, true);
+        showMessage(
+          "formMessage",
+          recovery
+            ? "このメールアドレスはすでに求職者として登録されています。ログインしてください。"
+            : "このメールアドレスはすでに登録されています。パスワードをご確認のうえログインしてください。求人者として登録済みの場合は、ログイン後に設定画面から求職者情報を追加できます。",
+          true
+        );
         return;
       }
       recoveredSession = recovery.session;
@@ -259,12 +321,14 @@
     const form = event.currentTarget;
     const errors = collectFormErrors(form);
 
-    const password = rawValue("password");
-    const passwordConfirmInput = document.getElementById("passwordConfirm");
-    const passwordConfirm = passwordConfirmInput ? rawValue("passwordConfirm") : password;
-    if (passwordConfirmInput && password.length >= 8 && passwordConfirm.length >= 8 && password !== passwordConfirm) {
-      errors.push("パスワードと確認用パスワードが一致しません。");
-      markFieldInvalid(passwordConfirmInput);
+    if (!employerAddRoleUser) {
+      const password = rawValue("password");
+      const passwordConfirmInput = document.getElementById("passwordConfirm");
+      const passwordConfirm = passwordConfirmInput ? rawValue("passwordConfirm") : password;
+      if (passwordConfirmInput && password.length >= 8 && passwordConfirm.length >= 8 && password !== passwordConfirm) {
+        errors.push("パスワードと確認用パスワードが一致しません。");
+        markFieldInvalid(passwordConfirmInput);
+      }
     }
 
     if (errors.length) {
@@ -274,7 +338,8 @@
 
     setBusy(form, true);
 
-    const email = value("email");
+    const email = employerAddRoleUser ? employerAddRoleUser.email : value("email");
+    const password = rawValue("password");
     const contactName = value("name");
     const facilityName = value("facilityName");
     const employerProfileFields = {
@@ -290,6 +355,22 @@
       note: value("note"),
       source_path: window.location.pathname
     };
+
+    if (employerAddRoleUser) {
+      const { error: profileError } = await supabaseClient
+        .from("employer_profiles")
+        .insert(Object.assign({ user_id: employerAddRoleUser.id }, employerProfileFields));
+      setBusy(form, false);
+      if (profileError) {
+        console.error(profileError);
+        showMessage("formMessage", "施設情報を保存できませんでした。" + (profileError.message ? "（" + profileError.message + "）" : ""), true);
+        return;
+      }
+      markHasAccount();
+      showMessage("formMessage", "求人者情報を追加しました。マイページへ移動します。", false);
+      setTimeout(function () { window.location.href = "employer-dashboard.html"; }, 900);
+      return;
+    }
 
     // public.handle_new_profile() (a trigger on auth.users) creates the
     // employer_profiles row in the same transaction as the account, using
@@ -319,7 +400,13 @@
       const recovery = await tryRecoverOrphanedAccount(email, password, "employer_profiles");
       if (!recovery || recovery.profileExists) {
         setBusy(form, false);
-        showMessage("formMessage", ALREADY_REGISTERED_MESSAGE, true);
+        showMessage(
+          "formMessage",
+          recovery
+            ? "このメールアドレスはすでに求人者として登録されています。ログインしてください。"
+            : "このメールアドレスはすでに登録されています。パスワードをご確認のうえログインしてください。求職者として登録済みの場合は、ログイン後に設定画面から求人者情報を追加できます。",
+          true
+        );
         return;
       }
       recoveredSession = recovery.session;
@@ -374,10 +461,26 @@
     if (seekerForm) {
       seekerForm.addEventListener("submit", saveSeeker);
       wirePasswordMatch(document.getElementById("password"), document.getElementById("passwordConfirm"));
+      setBusy(seekerForm, true);
+      detectAddRoleMode(seekerForm, "seeker_profiles", "seeker-dashboard.html", "求職者")
+        .then(function (result) {
+          if (result === "redirecting") return; // stays disabled - navigating away shortly
+          if (result) seekerAddRoleUser = result;
+          setBusy(seekerForm, false);
+        })
+        .catch(function (error) { console.error(error); setBusy(seekerForm, false); });
     }
     if (employerForm) {
       employerForm.addEventListener("submit", saveEmployer);
       wirePasswordMatch(document.getElementById("password"), document.getElementById("passwordConfirm"));
+      setBusy(employerForm, true);
+      detectAddRoleMode(employerForm, "employer_profiles", "employer-dashboard.html", "求人者")
+        .then(function (result) {
+          if (result === "redirecting") return;
+          if (result) employerAddRoleUser = result;
+          setBusy(employerForm, false);
+        })
+        .catch(function (error) { console.error(error); setBusy(employerForm, false); });
     }
     if (searchButton) {
       searchButton.addEventListener("click", function (event) {
