@@ -200,6 +200,7 @@
       return;
     }
 
+    try { localStorage.setItem("medi_job_has_account", "1"); } catch (_) {}
     showNotice("ログインしました。マイページへ移動します。", false);
     setTimeout(function () {
       window.location.href = selectedRole === "seeker" ? "seeker-dashboard.html" : "employer-dashboard.html";

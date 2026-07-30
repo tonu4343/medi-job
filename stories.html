@@ -96,11 +96,17 @@
           location.href = 'index.html';
         });
       }
+      function hasAccountOnDevice() {
+        try { return localStorage.getItem('medi_job_has_account') === '1'; } catch (_) { return true; }
+      }
       async function applyAuthState() {
         if (!supabaseClient) return;
         const session = await supabaseClient.auth.getSession();
         const user = session.data.session?.user;
-        if (!user) return;
+        if (!user) {
+          if (!hasAccountOnDevice()) document.getElementById('headerLoginLink').style.display = 'none';
+          return;
+        }
         showLoggedInHeader(user.user_metadata?.role);
       }
       applyAuthState();

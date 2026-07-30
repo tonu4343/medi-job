@@ -37,6 +37,12 @@
     message.style.color = isError ? "#b42318" : "";
   }
 
+  // Marks this browser as having an account, so public pages know to show
+  // the ログイン header link to a returning visitor rather than only 会員登録.
+  function markHasAccount() {
+    try { localStorage.setItem("medi_job_has_account", "1"); } catch (_) {}
+  }
+
   function fieldLabel(el) {
     if (el.type === "checkbox") return "利用規約・プライバシーポリシーへの同意";
     const label = el.closest(".field")?.querySelector("label") || document.querySelector('label[for="' + el.id + '"]');
@@ -224,6 +230,7 @@
     }
 
     const hasSession = Boolean(authData?.session || recoveredSession);
+    markHasAccount();
     showMessage("formMessage", hasSession ? "\u767b\u9332\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f\u3002\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3078\u79fb\u52d5\u3057\u307e\u3059\u3002" : "\u767b\u9332\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f\u3002\u5c4a\u3044\u305f\u78ba\u8a8d\u30e1\u30fc\u30eb\u3092\u958b\u3044\u3066\u8a8d\u8a3c\u3092\u5b8c\u4e86\u3057\u3066\u304b\u3089\u3001\u30ed\u30b0\u30a4\u30f3\u3057\u3066\u304f\u3060\u3055\u3044\u3002", false);
     // Fire-and-forget: a welcome-email outage must never block or delay
     // the registration flow itself, so this isn't awaited before the redirect.
@@ -323,6 +330,7 @@
     }
 
     const hasSession = Boolean(authData?.session || recoveredSession);
+    markHasAccount();
     showMessage("formMessage", hasSession ? "登録が完了しました。求人作成画面へ移動します。" : "登録が完了しました。届いた確認メールを開いて認証を完了してから、ログインしてください。", false);
     // Fire-and-forget: a welcome-email outage must never block or delay
     // the registration flow itself, so this isn't awaited before the

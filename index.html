@@ -334,6 +334,13 @@
           el.classList.add('is-masked');
         });
       }
+      function hasAccountOnDevice() {
+        try { return localStorage.getItem('medi_job_has_account') === '1'; } catch (_) { return true; }
+      }
+      function hideLoginForNewVisitor() {
+        const loginLink = document.getElementById('headerLoginLink');
+        if (loginLink && !hasAccountOnDevice()) loginLink.style.display = 'none';
+      }
       function showLoggedInHeader(role) {
         document.getElementById('headerLoginLink').style.display = 'none';
         document.getElementById('headerRegisterLink').style.display = 'none';
@@ -351,7 +358,7 @@
         if (!supabaseClient) return;
         const session = await supabaseClient.auth.getSession();
         const user = session.data.session?.user;
-        if (!user) { maskExampleJobFacilities(); return; }
+        if (!user) { maskExampleJobFacilities(); hideLoginForNewVisitor(); return; }
         showLoggedInHeader(user.user_metadata?.role);
       }
       applyAuthState();
