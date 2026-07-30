@@ -30,7 +30,17 @@
   function isRecent(job) { if (!job.created_at) return false; const days = (Date.now() - new Date(job.created_at).getTime()) / 86400000; return days >= 0 && days <= 7; }
   const pinIcon = '<svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/></svg>';
   const clockIcon = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.3 2"/></svg>';
-  async function logoutWire() { const btn = document.getElementById('logoutButton'); if (!btn) return; btn.addEventListener('click', async () => { if (supabaseClient) await supabaseClient.auth.signOut(); location.href='login.html'; }); }
+  // seeker-jobs.html and job-detail.html are browsable without logging in
+  // (see topbarWire below), so ログアウト must stay hidden until a session
+  // is actually confirmed - there's nothing to log out of otherwise.
+  async function logoutWire() {
+    const btn = document.getElementById('logoutButton'); if (!btn) return;
+    if (!supabaseClient) return;
+    const session = await supabaseClient.auth.getSession();
+    if (!session.data.session?.user) return;
+    btn.hidden = false;
+    btn.addEventListener('click', async () => { await supabaseClient.auth.signOut(); location.href='login.html'; });
+  }
   // Pages like seeker-jobs.html are browsable without logging in, so this
   // just fills the sidebar topbar when a session exists and leaves the
   // default placeholder text otherwise - no redirect either way.
