@@ -389,6 +389,26 @@ to authenticated
 using (auth.uid() = employer_id)
 with check (auth.uid() = employer_id);
 
+-- ♡ (お気に入り) on seeker-jobs.html / seeker-dashboard.html
+create table if not exists public.seeker_favorites (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  job_id uuid not null references public.jobs(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (user_id, job_id)
+);
+
+alter table public.seeker_favorites enable row level security;
+
+drop policy if exists "Seekers manage own favorites" on public.seeker_favorites;
+
+create policy "Seekers manage own favorites"
+on public.seeker_favorites
+for all
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
 -- Private application chat (application-chat.html)
 create table if not exists public.application_messages (
   id uuid primary key default gen_random_uuid(),

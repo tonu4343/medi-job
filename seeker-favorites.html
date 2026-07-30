@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>求人検索 | Medi Job</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#005bac"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="icon" href="assets/icon-32.png">
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>お気に入り | Medi Job</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#005bac"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="icon" href="assets/icon-32.png">
   <link rel="stylesheet" href="styles.css">
   <style>
     :root { --sj-blue:#1565C0; --sj-blue-dark:#0d47a1; --sj-green:#22C55E; --sj-green-dark:#16A34A; --sj-ink:#101828; --sj-muted:#64748B; --sj-line:#E5EAF1; --sj-radius:18px; }
@@ -30,17 +30,6 @@
     .sj-page-head h1 { margin:0; color:var(--sj-ink); font-size:clamp(26px,3.2vw,36px); line-height:1.3; font-weight:900; letter-spacing:-.01em; }
     .sj-page-head p { margin:8px 0 0; color:var(--sj-muted); font-size:14.5px; font-weight:700; line-height:1.8; }
 
-    .sj-search-panel { background:#fff; border:1px solid var(--sj-line); border-radius:var(--sj-radius); box-shadow:0 10px 30px rgba(16,24,40,.06); padding:22px clamp(20px,3vw,28px); margin-bottom:28px; }
-    .sj-filter-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) auto; gap:14px; align-items:end; }
-    .sj-filter-grid label { display:grid; gap:7px; }
-    .sj-filter-grid label span { color:#334155; font-size:12.5px; font-weight:800; }
-    .sj-filter-grid select { width:100%; height:46px; padding:0 14px; color:#1e293b; background:#F8FAFC; border:1px solid #DDE4EC; border-radius:10px; font:inherit; font-size:13.5px; outline:none; transition:border-color .15s,box-shadow .15s; }
-    .sj-filter-grid select:focus { border-color:var(--sj-blue); box-shadow:0 0 0 4px rgba(21,101,192,.12); background:#fff; }
-    .btn { display:inline-flex; align-items:center; justify-content:center; height:46px; padding:0 22px; border-radius:10px; font-weight:900; font-size:14px; border:0; cursor:pointer; text-decoration:none; white-space:nowrap; }
-    .btn-green { color:#fff; background:linear-gradient(180deg,#34D178,var(--sj-green)); box-shadow:0 12px 24px rgba(34,197,94,.28); }
-    .btn-green:hover { filter:brightness(1.03); }
-    .btn-outline { color:var(--sj-blue); background:#fff; border:1.5px solid #C7DAF0; }
-
     .sj-toolbar { display:flex; justify-content:space-between; gap:16px; align-items:baseline; margin:0 0 16px; }
     .sj-toolbar h2 { margin:0; color:var(--sj-ink); font-size:20px; font-weight:900; }
     .sj-toolbar .sj-count { color:var(--sj-muted); font-size:13.5px; font-weight:800; }
@@ -50,20 +39,18 @@
     .sj-job-card:hover { transform:translateY(-3px); box-shadow:0 20px 40px rgba(16,24,40,.12); border-color:#CFE0F5; }
     .sj-job-card-link { position:absolute; inset:0; z-index:1; border-radius:inherit; }
     .sj-job-card-link:focus-visible { outline:3px solid var(--sj-blue); outline-offset:2px; }
-    .sj-job-card-save { position:absolute; top:14px; right:14px; z-index:2; width:34px; height:34px; display:grid; place-items:center; color:#94A3B8; background:rgba(255,255,255,.92); border:1px solid #E5EAF1; border-radius:50%; font-size:17px; line-height:1; cursor:pointer; transition:color .15s,border-color .15s,transform .15s; }
-    .sj-job-card-save:hover { color:#EF4444; border-color:#FBD5D5; transform:scale(1.08); }
-    .sj-job-card-save.active { color:#EF4444; border-color:#FBD5D5; }
-    .sj-job-card-save:disabled { cursor:default; opacity:.45; }
+    .sj-job-card-save { position:absolute; top:14px; right:14px; z-index:2; width:34px; height:34px; display:grid; place-items:center; color:#EF4444; background:rgba(255,255,255,.92); border:1px solid #FBD5D5; border-radius:50%; font-size:17px; line-height:1; cursor:pointer; transition:transform .15s; }
+    .sj-job-card-save:hover { transform:scale(1.08); }
+    .sj-job-card-save:disabled { cursor:default; opacity:.6; }
 
     .sj-job-card-media { position:relative; flex:0 0 220px; width:220px; height:160px; overflow:hidden; border-radius:14px; background:#EEF3FA; }
     .sj-job-card-media img { width:100%; height:100%; object-fit:cover; }
-    .sj-badge-new { position:absolute; top:10px; left:10px; z-index:2; display:inline-flex; align-items:center; height:22px; padding:0 10px; color:#fff; background:var(--sj-blue); border-radius:999px; font-size:10.5px; font-weight:900; letter-spacing:.03em; }
+    .sj-badge-closed { position:absolute; top:10px; left:10px; z-index:2; display:inline-flex; align-items:center; height:22px; padding:0 10px; color:#fff; background:#94A3B8; border-radius:999px; font-size:10.5px; font-weight:900; letter-spacing:.03em; }
 
     .sj-job-card-body { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
     .sj-job-card-badges { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:9px; }
     .sj-badge { display:inline-flex; align-items:center; height:24px; padding:0 11px; border-radius:999px; font-size:11.5px; font-weight:900; white-space:nowrap; }
     .sj-badge-type { color:var(--sj-green-dark); background:#EAFBF1; border:1px solid #BCEDD1; }
-    .sj-badge-match { color:var(--sj-blue); background:#EAF2FC; border:1px solid #C7DAF0; }
 
     .sj-job-card-title { margin:0 0 5px; color:var(--sj-ink); font-size:19px; line-height:1.4; font-weight:900; }
     .sj-job-card-facility { margin:0 0 10px; color:var(--sj-muted); font-size:13px; font-weight:700; }
@@ -74,9 +61,12 @@
     .sj-job-card-footer { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:14px; padding-top:14px; border-top:1px dashed var(--sj-line); }
     .sj-job-card-salary { color:var(--sj-green-dark); font-size:16.5px; font-weight:900; }
     .sj-job-card-cta { position:relative; z-index:2; pointer-events:none; padding:0 18px; height:38px; font-size:12.5px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; height:46px; padding:0 22px; border-radius:10px; font-weight:900; font-size:14px; border:0; cursor:pointer; text-decoration:none; white-space:nowrap; }
+    .btn-outline { color:var(--sj-blue); background:#fff; border:1.5px solid #C7DAF0; }
     .sj-job-card:hover .sj-job-card-cta { color:#fff; background:var(--sj-blue); border-color:var(--sj-blue); }
 
     .sj-jobs-empty { padding:48px 24px; text-align:center; color:var(--sj-muted); background:#fff; border:1px dashed var(--sj-line); border-radius:var(--sj-radius); font-size:14px; font-weight:700; }
+    .sj-jobs-empty a { color: var(--sj-blue); font-weight: 900; }
 
     @media (max-width: 960px) {
       .dash-body { grid-template-columns: 1fr; }
@@ -85,14 +75,8 @@
       .side-nav a { white-space: nowrap; }
       .support-card { display: none; }
     }
-    @media(max-width:980px){
-      .sj-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-      .sj-filter-grid .btn{grid-column:1/-1;}
-      .sj-job-card-media{flex-basis:170px;width:170px;height:140px}
-    }
     @media(max-width:640px){
       .flow-shell{padding:20px 14px 48px}
-      .sj-filter-grid{grid-template-columns:1fr}
       .sj-job-card{flex-direction:column}
       .sj-job-card-media{width:100%;height:170px}
       .sj-job-card-footer{flex-direction:column;align-items:flex-start;gap:10px}
@@ -111,8 +95,8 @@
     <aside class="dash-sidebar" aria-label="求職者メニュー">
       <ul class="side-nav">
         <li><a href="seeker-dashboard.html"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg>ダッシュボード</a></li>
-        <li><a class="active" href="seeker-jobs.html"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>求人を探す</a></li>
-        <li><a href="seeker-favorites.html"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.3-9.5-8.7C1 8.3 2.6 5 6 5c2 0 3.3 1.1 4 2.2C10.7 6.1 12 5 14 5c3.4 0 5 3.3 3.5 6.3C19 15.7 12 20 12 20z"/></svg>お気に入り</a></li>
+        <li><a href="seeker-jobs.html"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>求人を探す</a></li>
+        <li><a class="active" href="seeker-favorites.html"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.3-9.5-8.7C1 8.3 2.6 5 6 5c2 0 3.3 1.1 4 2.2C10.7 6.1 12 5 14 5c3.4 0 5 3.3 3.5 6.3C19 15.7 12 20 12 20z"/></svg>お気に入り</a></li>
         <li><a href="seeker-applications.html"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>応募管理</a></li>
         <li><a href="seeker-messages.html"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>メッセージ</a></li>
         <li><a href="seeker-profile.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>プロフィール</a></li>
@@ -130,14 +114,85 @@
     </aside>
 
     <main class="flow-shell">
-
-      <div class="sj-page-head"><h1>あなたに合う求人を探す</h1><p>職種・勤務地・勤務条件から、希望に合う医療求人を検索できます。</p></div>
-
-      <section class="sj-search-panel"><div class="sj-filter-grid"><label><span>職種</span><select id="category"><option value="">すべて</option><option>看護師</option><option>臨床検査技師</option><option>放射線技師</option><option>理学療法士</option><option>作業療法士</option><option>言語聴覚士</option><option>ヘルパー</option></select></label><label><span>勤務地</span><select id="location"><option value="">すべて</option><option>東京都</option><option>神奈川県</option><option>千葉県</option><option>埼玉県</option></select></label><label><span>勤務形態</span><select id="type"><option value="">すべて</option><option>スポット</option><option>パート</option><option>業務委託</option><option>非常勤</option></select></label><label><span>勤務日</span><select id="workDate"><option value="">すべて</option><option>平日</option><option>土日</option><option>単発</option><option>相談</option></select></label><button class="btn btn-green" id="searchButton" type="button">この条件で検索</button></div></section>
-
-      <div class="sj-toolbar"><h2>検索結果</h2><span class="sj-count" id="jobCount">0件</span></div>
-      <section class="sj-jobs-list" id="jobsList"></section>
-
+      <div class="sj-page-head"><h1>お気に入りの求人</h1><p>♡で保存した求人をまとめて確認できます。</p></div>
+      <div class="sj-toolbar"><h2>保存した求人</h2><span class="sj-count" id="jobCount">0件</span></div>
+      <section class="sj-jobs-list" id="favoritesList"></section>
     </main>
   </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="account-guard.js"></script><script src="favorites.js"></script><script src="job-flow.js"></script><script src="pwa-register.js"></script></body></html>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="account-guard.js"></script>
+<script src="favorites.js"></script>
+<script>
+  (function () {
+    const config = window.MEDISPOT_SUPABASE || {};
+    const configured = config.url && config.anonKey && !config.url.includes("YOUR_PROJECT_ID") && !config.anonKey.includes("YOUR_SUPABASE_ANON_KEY");
+    const supabaseClient = configured && window.supabase ? window.supabase.createClient(config.url, config.anonKey) : null;
+    const pinIcon = '<svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/></svg>';
+    const clockIcon = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.3 2"/></svg>';
+    function esc(v) { return String(v || "").replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]; }); }
+    function imageFor(job) { const c = String(job.category || ""); return job.image || (c.includes("検査") ? "assets/job-lab.png" : c.includes("放射") ? "assets/job-radiology.png" : "assets/job-nurse.png"); }
+    function formatSalary(value) {
+      const trimmed = String(value || "").trim();
+      if (!trimmed) return "";
+      if (/^[\d,]+$/.test(trimmed)) return "時給" + Number(trimmed.replace(/,/g, "")).toLocaleString("ja-JP") + "円";
+      return trimmed;
+    }
+    function card(job) {
+      const title = esc(job.title || job.category || "医療求人");
+      const href = "job-detail.html?id=" + encodeURIComponent(job.id);
+      const closed = job.status && job.status !== "open";
+      return '<article class="sj-job-card">'
+        + '<a class="sj-job-card-link" href="' + href + '" aria-label="' + title + '詳細を見る"></a>'
+        + '<button class="sj-job-card-save fav-toggle" type="button" data-job-id="' + esc(job.id) + '" aria-label="お気に入りから削除">♥</button>'
+        + '<div class="sj-job-card-media"><img src="' + esc(imageFor(job)) + '" alt="">' + (closed ? '<span class="sj-badge-closed">募集終了</span>' : '') + '</div>'
+        + '<div class="sj-job-card-body">'
+          + '<div class="sj-job-card-badges"><span class="sj-badge sj-badge-type">' + esc(job.type || "スポット") + '</span></div>'
+          + '<h3 class="sj-job-card-title">' + title + '</h3>'
+          + '<p class="sj-job-card-facility">' + esc(job.facility_name || "医療機関") + '</p>'
+          + '<div class="sj-job-card-meta">'
+            + '<span class="sj-meta-item">' + pinIcon + esc(job.location || "-") + '</span>'
+            + '<span class="sj-meta-item">' + clockIcon + esc(job.work_date || "-") + '</span>'
+          + '</div>'
+          + '<div class="sj-job-card-footer"><div class="sj-job-card-salary">' + esc(formatSalary(job.salary) || "給与相談") + '</div><span class="btn btn-outline sj-job-card-cta">詳細を見る</span></div>'
+        + '</div>'
+        + '</article>';
+    }
+    async function load() {
+      if (!supabaseClient) { document.getElementById("favoritesList").innerHTML = '<div class="sj-jobs-empty">お気に入り機能をご利用いただけません。</div>'; return; }
+      const session = await supabaseClient.auth.getSession();
+      const user = session.data.session?.user;
+      if (!user) { window.location.href = "login.html?role=seeker"; return; }
+      if (!(await window.MEDISPOT_ACCOUNT_GUARD.check(supabaseClient, user, "seeker"))) return;
+      const profileResult = await supabaseClient.from("seeker_profiles").select("name").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const name = profileResult.data?.name;
+      document.getElementById("topbarName").textContent = name || "求職者";
+      document.getElementById("topbarInitial").textContent = (name || "求").trim().charAt(0).toUpperCase() || "求";
+
+      const favoriteIds = await window.MEDISPOT_FAVORITES.fetchFavoriteIds(supabaseClient, user.id);
+      const list = document.getElementById("favoritesList");
+      const jobIds = Array.from(favoriteIds);
+      let jobs = [];
+      if (jobIds.length) {
+        const jobsResult = await supabaseClient.from("jobs").select("*").in("id", jobIds);
+        jobs = jobsResult.error ? [] : (jobsResult.data || []);
+      }
+      document.getElementById("jobCount").textContent = jobs.length + "件";
+      list.innerHTML = jobs.length ? jobs.map(card).join("") : '<div class="sj-jobs-empty">まだお気に入りに追加した求人がありません。<br><a href="seeker-jobs.html">求人を探す</a></div>';
+      // Removing a favorite here should drop the card once the removal is
+      // actually confirmed, not just when the heart recolors.
+      window.MEDISPOT_FAVORITES.wire(list, supabaseClient, user.id, favoriteIds, function (jobId, favorited, btn) {
+        if (favorited) return;
+        const removedCard = btn.closest(".sj-job-card");
+        if (removedCard) removedCard.remove();
+        const remaining = list.querySelectorAll(".sj-job-card").length;
+        document.getElementById("jobCount").textContent = remaining + "件";
+        if (!remaining) list.innerHTML = '<div class="sj-jobs-empty">まだお気に入りに追加した求人がありません。<br><a href="seeker-jobs.html">求人を探す</a></div>';
+      });
+    }
+    document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html?role=seeker"; });
+    load().catch(function (error) { console.error(error); });
+  })();
+</script>
+<script src="pwa-register.js"></script></body></html>

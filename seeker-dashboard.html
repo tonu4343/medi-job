@@ -111,6 +111,7 @@
     .fav-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
     .fav-btn.active { color: #e6483c; }
     .fav-btn.active svg { fill: #e6483c; }
+    .fav-btn:disabled { cursor: default; opacity: .4; }
     .rec-job-body { display: flex; flex-direction: column; flex: 1; padding: 14px; }
     .rec-job-tags { display: flex; flex-wrap: wrap; gap: 6px; }
     .rec-job-tag { display: inline-flex; align-items: center; min-height: 22px; padding: 0 9px; color: var(--green-dark); background: #effff6; border: 1px solid #8bdbad; border-radius: 999px; font-size: 10.5px; font-weight: 900; }
@@ -262,6 +263,7 @@
       <ul class="side-nav">
         <li><a class="active" href="seeker-dashboard.html"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg>ダッシュボード</a></li>
         <li><a href="seeker-jobs.html"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>求人を探す</a></li>
+        <li><a href="seeker-favorites.html"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.3-9.5-8.7C1 8.3 2.6 5 6 5c2 0 3.3 1.1 4 2.2C10.7 6.1 12 5 14 5c3.4 0 5 3.3 3.5 6.3C19 15.7 12 20 12 20z"/></svg>お気に入り</a></li>
         <li><a href="seeker-applications.html"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>応募管理</a></li>
         <li><a href="seeker-messages.html"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>メッセージ<span class="nav-badge" id="sideMsgBadge" hidden></span></a></li>
         <li><a href="seeker-profile.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>プロフィール</a></li>
@@ -373,11 +375,14 @@
   <script src="supabase-config.js"></script>
   <script src="account-guard.js"></script>
   <script src="application-status.js"></script>
+  <script src="favorites.js"></script>
   <script>
     (function () {
       const config = window.MEDISPOT_SUPABASE || {};
       const configured = config.url && config.anonKey && !config.url.includes("YOUR_PROJECT_ID") && !config.anonKey.includes("YOUR_SUPABASE_ANON_KEY");
       const supabaseClient = configured && window.supabase ? window.supabase.createClient(config.url, config.anonKey) : null;
+      let currentUserId = null;
+      let favoriteIds = new Set();
       const demoJobs = [
         { id: "demo-nurse", title: "スポット看護師", category: "看護師", type: "スポット", location: "東京都 新宿区", work_date: "今週金曜 9:00-17:00", salary: "日給 18,000円〜22,000円", image: "assets/job-nurse.png" },
         { id: "demo-lab", title: "臨床検査技師", category: "臨床検査技師", type: "業務委託", location: "神奈川県 横浜市", work_date: "週1日から相談", salary: "日給 16,000円〜20,000円", image: "assets/job-lab.png" },
@@ -422,11 +427,11 @@
         list.innerHTML = items.map(function (job) {
           const href = "job-detail.html?id=" + encodeURIComponent(job.id || "demo-nurse");
           return '<div class="job-slide"><article class="rec-job-card">' +
-            '<div class="rec-job-thumb"><img src="' + esc(imageFor(job)) + '" alt="">' + (isNewJob(job) ? '<span class="rec-new-badge">NEW</span>' : '') + '<button class="fav-btn" type="button" aria-label="お気に入り"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.3-9.5-8.7C1 8.3 2.6 5 6 5c2 0 3.3 1.1 4 2.2C10.7 6.1 12 5 14 5c3.4 0 5 3.3 3.5 6.3C19 15.7 12 20 12 20z"/></svg></button></div>' +
+            '<div class="rec-job-thumb"><img src="' + esc(imageFor(job)) + '" alt="">' + (isNewJob(job) ? '<span class="rec-new-badge">NEW</span>' : '') + '<button class="fav-btn fav-toggle" type="button" data-job-id="' + esc(job.id) + '" aria-label="お気に入り"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.3-9.5-8.7C1 8.3 2.6 5 6 5c2 0 3.3 1.1 4 2.2C10.7 6.1 12 5 14 5c3.4 0 5 3.3 3.5 6.3C19 15.7 12 20 12 20z"/></svg></button></div>' +
             '<div class="rec-job-body"><div class="rec-job-tags"><span class="rec-job-tag">' + esc(job.type || "スポット") + '</span>' + (job.category ? '<span class="rec-job-tag alt">' + esc(job.category) + '</span>' : '') + '</div><h3>' + esc(job.title || job.category || "医療求人") + '</h3><p>' + esc(job.location || "勤務地相談") + '</p><p>' + esc(job.work_date || "") + '</p><div class="rec-job-salary">' + esc(job.salary || "給与相談") + '</div><a class="btn btn-outline" href="' + href + '">詳細を見る</a></div>' +
           '</article></div>';
         }).join("") || '<div class="rec-empty">条件に合う求人が見つかりませんでした。</div>';
-        document.querySelectorAll(".fav-btn").forEach(function (btn) { btn.addEventListener("click", function () { btn.classList.toggle("active"); }); });
+        window.MEDISPOT_FAVORITES.wire(list, supabaseClient, currentUserId, favoriteIds);
         const dots = document.getElementById("carouselDots");
         dots.innerHTML = items.map(function (_, i) { return '<span' + (i === 0 ? ' class="active"' : "") + '></span>'; }).join("");
         const dotEls = dots.querySelectorAll("span");
@@ -556,6 +561,9 @@
         }
         const profile = profileResult.data;
         applyProfile(profile, user.email);
+
+        currentUserId = user.id;
+        favoriteIds = await window.MEDISPOT_FAVORITES.fetchFavoriteIds(supabaseClient, currentUserId);
 
         let jobQuery = supabaseClient.from("jobs").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(6);
         if (profile?.license) jobQuery = jobQuery.eq("category", profile.license);

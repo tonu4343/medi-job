@@ -51,7 +51,7 @@
     const href = 'job-detail.html?id=' + encodeURIComponent(job.id);
     return '<article class="sj-job-card">'
       + '<a class="sj-job-card-link" href="' + href + '" aria-label="' + title + t.detail + '"></a>'
-      + '<button class="sj-job-card-save" type="button" aria-label="お気に入りに追加">♡</button>'
+      + '<button class="sj-job-card-save fav-toggle" type="button" data-job-id="' + esc(job.id) + '" aria-label="お気に入りに追加">♡</button>'
       + '<div class="sj-job-card-media"><img src="' + esc(imageFor(job)) + '" alt="">' + (isRecent(job) ? '<span class="sj-badge-new">' + t.newBadge + '</span>' : '') + '</div>'
       + '<div class="sj-job-card-body">'
         + '<div class="sj-job-card-badges"><span class="sj-badge sj-badge-type">' + esc(job.type || t.spot) + '</span><span class="sj-badge sj-badge-match">' + t.match + '</span></div>'
@@ -65,7 +65,27 @@
       + '</div>'
       + '</article>';
   }
-  async function loadJobsPage() { const list = document.getElementById('jobsList'); if (!list) return; let jobs = demoJobs; if (supabaseClient) { const r = await supabaseClient.from('jobs').select('*').eq('status','open').order('created_at',{ascending:false}); if (!r.error && r.data && r.data.length) jobs = r.data; } const render = () => { const cat = document.getElementById('category').value; const loc = document.getElementById('location').value; const type = document.getElementById('type').value; const day = document.getElementById('workDate').value; const filtered = jobs.filter(j => (!cat || j.category === cat) && (!loc || String(j.location || '').includes(loc)) && (!type || j.type === type) && (!day || String(j.work_date || '').includes(day))); document.getElementById('jobCount').textContent = filtered.length + t.count; list.innerHTML = filtered.length ? filtered.map(card).join('') : '<div class="sj-jobs-empty">'+t.none+'</div>'; }; document.getElementById('searchButton').addEventListener('click', render); render(); }
+  async function loadJobsPage() {
+    const list = document.getElementById('jobsList'); if (!list) return;
+    let jobs = demoJobs;
+    if (supabaseClient) { const r = await supabaseClient.from('jobs').select('*').eq('status','open').order('created_at',{ascending:false}); if (!r.error && r.data && r.data.length) jobs = r.data; }
+    let currentUserId = null;
+    let favoriteIds = new Set();
+    if (supabaseClient) {
+      const session = await supabaseClient.auth.getSession();
+      currentUserId = session.data.session?.user?.id || null;
+      if (currentUserId) favoriteIds = await window.MEDISPOT_FAVORITES.fetchFavoriteIds(supabaseClient, currentUserId);
+    }
+    const render = () => {
+      const cat = document.getElementById('category').value; const loc = document.getElementById('location').value; const type = document.getElementById('type').value; const day = document.getElementById('workDate').value;
+      const filtered = jobs.filter(j => (!cat || j.category === cat) && (!loc || String(j.location || '').includes(loc)) && (!type || j.type === type) && (!day || String(j.work_date || '').includes(day)));
+      document.getElementById('jobCount').textContent = filtered.length + t.count;
+      list.innerHTML = filtered.length ? filtered.map(card).join('') : '<div class="sj-jobs-empty">'+t.none+'</div>';
+      window.MEDISPOT_FAVORITES.wire(list, supabaseClient, currentUserId, favoriteIds);
+    };
+    document.getElementById('searchButton').addEventListener('click', render);
+    render();
+  }
   async function findJob(id, currentUser) {
     if (!id) return demoJobs[0];
     if (id.startsWith('demo-')) return demoJobs.find(j => j.id === id) || demoJobs[0];
