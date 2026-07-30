@@ -19,6 +19,10 @@
   const params = new URLSearchParams(window.location.search);
   const oauthDivider = document.querySelector("#oauthDivider");
   const lineLoginButton = document.querySelector("#lineLoginButton");
+  const roleTabs = document.querySelector("#roleTabs");
+  const roleSwitchLink = document.querySelector("#roleSwitchLink");
+  const loginLead = document.querySelector("#loginLead");
+  const ROLE_LABEL = { seeker: "求職者", employer: "求人者" };
 
   function showNotice(text, isError) {
     if (!notice) return;
@@ -71,6 +75,28 @@
   }
 
   tabs.forEach((tab) => tab.addEventListener("click", () => setRole(tab.dataset.role)));
+
+  function lockRole(role) {
+    setRole(role);
+    if (roleTabs) roleTabs.hidden = true;
+    if (loginLead) loginLead.textContent = ROLE_LABEL[role] + "としてログインしてください。";
+    if (roleSwitchLink) {
+      const otherRole = role === "employer" ? "seeker" : "employer";
+      roleSwitchLink.textContent = ROLE_LABEL[otherRole] + "としてログインする場合はこちら";
+      roleSwitchLink.hidden = false;
+      roleSwitchLink.onclick = () => unlockRoles(otherRole);
+    }
+  }
+
+  function unlockRoles(role) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("role");
+    window.history.replaceState({}, "", url.pathname + (url.search || "") + url.hash);
+    if (roleTabs) roleTabs.hidden = false;
+    if (loginLead) loginLead.textContent = "ログイン種別を選択してください。";
+    if (roleSwitchLink) roleSwitchLink.hidden = true;
+    setRole(role);
+  }
 
   if (lineLoginButton) {
     lineLoginButton.addEventListener("click", () => {
@@ -165,7 +191,14 @@
     }, 600);
   });
 
-  setRole(params.get("role") === "employer" ? "employer" : "seeker");
+  const requestedRole = params.get("role") === "employer" ? "employer" : params.get("role") === "seeker" ? "seeker" : null;
+  // roleError means the account type didn't match the requested role, so both
+  // tabs must stay visible for the user to pick the correct one.
+  if (requestedRole && params.get("roleError") !== "1") {
+    lockRole(requestedRole);
+  } else {
+    setRole(requestedRole || "seeker");
+  }
   if (params.get("accountStatus") === "suspended") {
     showNotice("このアカウントは利用停止されています。詳細はサポートまでお問い合わせください。", true);
   } else if (params.get("accountStatus") === "withdrawn") {

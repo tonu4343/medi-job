@@ -212,6 +212,22 @@
       background: var(--green);
       border-color: var(--green);
     }
+    .role-tabs[hidden] { display: none; }
+    .role-switch-link {
+      display: block;
+      width: 100%;
+      margin: -10px 0 22px;
+      padding: 0;
+      color: var(--blue);
+      background: none;
+      border: 0;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .role-switch-link:hover { text-decoration: underline; }
+    .role-switch-link[hidden] { display: none; }
 
     .field { margin-bottom: 18px; }
     .field label {
@@ -376,12 +392,13 @@
 
     <section class="login-card" aria-label="ログインフォーム">
       <h2>アカウントログイン</h2>
-      <p class="lead">ログイン種別を選択してください。</p>
+      <p class="lead" id="loginLead">ログイン種別を選択してください。</p>
 
-      <div class="role-tabs" role="tablist" aria-label="ログイン種別">
+      <div class="role-tabs" id="roleTabs" role="tablist" aria-label="ログイン種別">
         <button class="role-tab seeker active" type="button" data-role="seeker">求職者</button>
         <button class="role-tab employer" type="button" data-role="employer">求人者</button>
       </div>
+      <button class="role-switch-link" id="roleSwitchLink" type="button" hidden></button>
 
       <form action="#" method="post" id="loginForm">
         <input type="hidden" id="roleInput" name="role" value="seeker">
