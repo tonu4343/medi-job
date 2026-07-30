@@ -57,6 +57,20 @@
     .field textarea { min-height: 128px; resize: vertical; }
     .field input:focus, .field select:focus, .field textarea:focus { outline: 0; border-color: var(--blue); box-shadow: 0 0 0 4px rgba(0,91,172,.1); }
     .field-help { color: #6a7d8d; font-size: 11px; line-height: 1.6; }
+    .schedule-field { gap: 10px; }
+    .schedule-mode-toggle { display: flex; flex-wrap: wrap; gap: 8px; }
+    .schedule-mode-btn { min-height: 40px; padding: 0 16px; color: #153e61; background: #fff; border: 1px solid #c9d9e4; border-radius: 8px; font-size: 13px; font-weight: 900; cursor: pointer; }
+    .schedule-mode-btn.is-active { color: #fff; background: linear-gradient(180deg, #28c975, var(--green)); border-color: transparent; }
+    .schedule-panel[hidden] { display: none; }
+    .schedule-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .schedule-row + .schedule-row { margin-top: 8px; }
+    .schedule-row input[type="date"], .schedule-row input[type="time"] { width: auto; flex: 0 0 auto; }
+    .schedule-row .btn { border: 0; cursor: pointer; }
+    .schedule-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+    .schedule-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; color: #153e61; background: #f7fbfe; border: 1px solid #d7e8f3; border-radius: 8px; font-size: 13px; font-weight: 800; }
+    .schedule-list button { min-height: 28px; padding: 0 10px; color: #9d2d24; background: #fff; border: 1px solid #f1bbb5; border-radius: 6px; font-size: 11px; font-weight: 900; cursor: pointer; }
+    .schedule-summary { margin: 0; color: #067044; font-size: 13px; font-weight: 900; }
+    .schedule-summary:empty { display: none; }
     .form-status { display: none; margin: 20px 0 0; padding: 14px 16px; border-radius: 8px; font-size: 13px; font-weight: 800; line-height: 1.7; }
     .form-status.success { display: block; color: #067044; background: #eafff3; border: 1px solid #a8e4c2; }
     .form-status.error { display: block; color: #9d2d24; background: #fff2f0; border: 1px solid #f1bbb5; }
@@ -96,7 +110,7 @@
       .support-card { display: none; }
     }
     @media (max-width: 860px) { .form-layout { grid-template-columns: 1fr; } .guide-card { position: static; } }
-    @media (max-width: 620px) { .job-new-shell { padding: 20px 14px 48px; } .form-grid, .preview-summary { grid-template-columns: 1fr; } .field.full, .preview-item.full { grid-column: auto; } .form-actions, .preview-actions { flex-direction: column-reverse; } .form-actions .btn, .preview-actions .btn { width: 100%; } .preview-modal { padding: 10px; } .preview-dialog { max-height: calc(100vh - 20px); } }
+    @media (max-width: 620px) { .job-new-shell { padding: 20px 14px 48px; } .form-grid, .preview-summary { grid-template-columns: 1fr; } .field.full, .preview-item.full { grid-column: auto; } .form-actions, .preview-actions { flex-direction: column-reverse; } .form-actions .btn, .preview-actions .btn { width: 100%; } .preview-modal { padding: 10px; } .preview-dialog { max-height: calc(100vh - 20px); } .schedule-row input[type="date"], .schedule-row input[type="time"] { flex: 1 1 130px; } .schedule-row .btn { width: 100%; } }
   </style>
 </head>
 <body class="job-new-page employer-dashboard-page">
@@ -148,12 +162,47 @@
           <div class="form-grid">
             <div class="field full"><label for="title">求人タイトル<span class="required">必須</span></label><input id="title" name="title" required maxlength="80" placeholder="例）【日勤のみ】外来看護師（週3日〜）"></div>
             <div class="field"><label for="category">募集職種<span class="required">必須</span></label><select id="category" name="category" required><option value="">選択してください</option><option>看護師</option><option>准看護師</option><option>臨床検査技師</option><option>診療放射線技師</option><option>理学療法士</option><option>作業療法士</option><option>言語聴覚士</option><option>薬剤師</option><option>医療事務</option><option>その他</option></select></div>
-            <div class="field"><label for="type">雇用形態<span class="required">必須</span></label><select id="type" name="type" required><option value="">選択してください</option><option>スポット</option><option>非常勤</option><option>パート</option><option>業務委託</option><option>常勤</option></select></div>
             <div class="field"><label for="positions">募集人数<span class="required">必須</span></label><input id="positions" name="positions" type="number" min="1" max="99" value="1" required><span class="field-help">今回募集する人数を入力してください。</span></div>
+
+            <div class="field full schedule-field">
+              <label>勤務日<span class="required">必須</span></label>
+              <input type="hidden" id="workDate" name="work_date">
+              <div class="schedule-mode-toggle">
+                <button type="button" class="schedule-mode-btn is-active" data-mode="dates">特定の日付を指定</button>
+                <button type="button" class="schedule-mode-btn" data-mode="range">期間で指定（毎日同じ時間）</button>
+              </div>
+              <div class="schedule-panel" data-panel="dates">
+                <div class="schedule-row">
+                  <input type="date" id="scheduleDateInput" aria-label="勤務日">
+                  <input type="time" id="scheduleStartInput" value="09:00" aria-label="開始時刻">
+                  <span>〜</span>
+                  <input type="time" id="scheduleEndInput" value="13:00" aria-label="終了時刻">
+                  <button type="button" class="btn btn-outline" id="scheduleAddBtn">追加</button>
+                </div>
+                <ul class="schedule-list" id="scheduleList"></ul>
+              </div>
+              <div class="schedule-panel" data-panel="range" hidden>
+                <div class="schedule-row">
+                  <input type="date" id="scheduleRangeStart" aria-label="開始日">
+                  <span>〜</span>
+                  <input type="date" id="scheduleRangeEnd" aria-label="終了日">
+                </div>
+                <div class="schedule-row">
+                  <input type="time" id="scheduleRangeStartTime" value="09:00" aria-label="開始時刻">
+                  <span>〜</span>
+                  <input type="time" id="scheduleRangeEndTime" value="16:00" aria-label="終了時刻">
+                </div>
+              </div>
+              <p class="schedule-summary" id="scheduleSummary"></p>
+              <span class="field-help">例）10月6日（火）9:00-13:00、10月13日（火）9:00-13:00　／　10月5日（月）から10月9日（金）まで毎日9:00-16:00</span>
+            </div>
+
+            <div class="field full"><label for="location">勤務地<span class="required">必須</span></label><input id="location" name="location" required maxlength="120" placeholder="例）東京都中央区内"></div>
+            <div class="field full"><label for="description">業務内容<span class="required">必須</span></label><textarea id="description" name="description" required maxlength="600" placeholder="例）企業内健診での胃部撮影"></textarea></div>
+            <div class="field full"><label for="salary">給与<span class="required">必須</span></label><input id="salary" name="salary" required maxlength="80" placeholder="例）日当：25,000円　交通費別途支給"><span class="field-help">交通費や各種手当がある場合はこちらにも記載してください。</span></div>
+
+            <div class="field"><label for="type">雇用形態<span class="required">必須</span></label><select id="type" name="type" required><option value="">選択してください</option><option>スポット</option><option>パート</option><option>常勤</option></select></div>
             <div class="field"><label for="employmentPeriod">勤務期間<span class="optional">任意</span></label><input id="employmentPeriod" name="employment_period" maxlength="120" placeholder="例）単日 / 3か月 / 長期"></div>
-            <div class="field full"><label for="salary">給与<span class="required">必須</span></label><input id="salary" name="salary" required maxlength="80" placeholder="例）時給 2,200円〜2,600円 / 月給 28万円〜"><span class="field-help">交通費や各種手当がある場合は仕事内容欄にも記載してください。</span></div>
-            <div class="field full"><label for="location">勤務地<span class="required">必須</span></label><input id="location" name="location" required maxlength="120" placeholder="例）東京都世田谷区"></div>
-            <div class="field full"><label for="workDate">勤務日<span class="required">必須</span></label><input id="workDate" name="work_date" required maxlength="120" placeholder="例）月〜金 / 週3日から相談可能 / 8月20日のみ"></div>
           </div>
         </section>
         <div class="form-status" id="formStatus" role="status" aria-live="polite"></div>
@@ -185,6 +234,7 @@
         <div class="preview-item"><dt>給与</dt><dd id="previewSalary"></dd></div>
         <div class="preview-item"><dt>勤務地</dt><dd id="previewLocation"></dd></div>
         <div class="preview-item full"><dt>勤務日</dt><dd id="previewSchedule"></dd></div>
+        <div class="preview-item full"><dt>業務内容</dt><dd id="previewDescription"></dd></div>
       </dl>
       <div class="preview-actions"><button class="btn btn-outline" id="previewBack" type="button">入力に戻る</button><button class="btn btn-green" id="publishButton" type="button">この内容で掲載する</button></div>
     </section>
@@ -206,6 +256,70 @@
       const previewModal = document.getElementById("previewModal");
       const publishButton = document.getElementById("publishButton");
       function message(text, error) { status.className = "form-status " + (error ? "error" : "success"); status.textContent = text; }
+      const WEEKDAY_JP = ["日", "月", "火", "水", "木", "金", "土"];
+      function formatDateJP(value) {
+        if (!value) return "";
+        const parts = value.split("-").map(Number);
+        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        return parts[1] + "月" + parts[2] + "日（" + WEEKDAY_JP[d.getDay()] + "）";
+      }
+      function formatTimeShort(value) { return value ? value.replace(/^0(\d:)/, "$1") : ""; }
+      const workDateInput = document.getElementById("workDate");
+      const scheduleSummary = document.getElementById("scheduleSummary");
+      const scheduleModeButtons = document.querySelectorAll(".schedule-mode-btn");
+      const schedulePanels = document.querySelectorAll(".schedule-panel");
+      let scheduleMode = "dates";
+      let scheduleDates = [];
+      function updateScheduleValue() {
+        let text = "";
+        if (scheduleMode === "dates") {
+          text = scheduleDates.map(function (entry) { return formatDateJP(entry.date) + formatTimeShort(entry.start) + "-" + formatTimeShort(entry.end); }).join("、");
+        } else {
+          const start = document.getElementById("scheduleRangeStart").value;
+          const end = document.getElementById("scheduleRangeEnd").value;
+          const startTime = document.getElementById("scheduleRangeStartTime").value;
+          const endTime = document.getElementById("scheduleRangeEndTime").value;
+          if (start && end) text = formatDateJP(start) + "から" + formatDateJP(end) + "まで毎日" + formatTimeShort(startTime) + "-" + formatTimeShort(endTime);
+        }
+        workDateInput.value = text;
+        scheduleSummary.textContent = text ? "登録内容：" + text : "";
+      }
+      function renderScheduleList() {
+        const list = document.getElementById("scheduleList");
+        list.innerHTML = "";
+        scheduleDates.forEach(function (entry, index) {
+          const li = document.createElement("li");
+          const label = document.createElement("span");
+          label.textContent = formatDateJP(entry.date) + " " + formatTimeShort(entry.start) + "〜" + formatTimeShort(entry.end);
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button"; removeBtn.textContent = "削除";
+          removeBtn.addEventListener("click", function () { scheduleDates.splice(index, 1); renderScheduleList(); });
+          li.appendChild(label); li.appendChild(removeBtn);
+          list.appendChild(li);
+        });
+        updateScheduleValue();
+      }
+      scheduleModeButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          scheduleMode = btn.dataset.mode;
+          scheduleModeButtons.forEach(function (b) { b.classList.toggle("is-active", b === btn); });
+          schedulePanels.forEach(function (panel) { panel.hidden = panel.dataset.panel !== scheduleMode; });
+          updateScheduleValue();
+        });
+      });
+      document.getElementById("scheduleAddBtn").addEventListener("click", function () {
+        const dateVal = document.getElementById("scheduleDateInput").value;
+        const startVal = document.getElementById("scheduleStartInput").value;
+        const endVal = document.getElementById("scheduleEndInput").value;
+        if (!dateVal || !startVal || !endVal) { message("勤務日の日付と開始・終了時刻を入力してください。", true); return; }
+        scheduleDates.push({ date: dateVal, start: startVal, end: endVal });
+        scheduleDates.sort(function (a, b) { return a.date.localeCompare(b.date); });
+        document.getElementById("scheduleDateInput").value = "";
+        renderScheduleList();
+      });
+      ["scheduleRangeStart", "scheduleRangeEnd", "scheduleRangeStartTime", "scheduleRangeEndTime"].forEach(function (id) {
+        document.getElementById(id).addEventListener("change", updateScheduleValue);
+      });
       async function load() {
         if (!supabaseClient) { message("Supabase設定を確認してください。入力内容は送信時にブラウザへ一時保存されます。", true); return; }
         const sessionResult = await supabaseClient.auth.getSession();
@@ -229,6 +343,7 @@
         previewText("previewSalary", record.salary);
         previewText("previewLocation", record.location);
         previewText("previewSchedule", record.work_date);
+        previewText("previewDescription", record.description);
         previewModal.hidden = false;
         document.body.classList.add("modal-open");
         publishButton.focus();
@@ -238,9 +353,10 @@
         event.preventDefault();
         if (!form.reportValidity()) return;
         const data = new FormData(form);
-        const title = data.get("title").trim(), salary = data.get("salary").trim(), location = data.get("location").trim(), workDate = data.get("work_date").trim();
-        if (hasMarkup(title) || hasMarkup(salary) || hasMarkup(location) || hasMarkup(workDate)) { message("「<」「>」は求人内容に使用できません。", true); return; }
-        pendingRecord = { employer_id: currentUser?.id || null, facility_name: employerProfile?.facility_name || "", title: title, category: data.get("category"), type: data.get("type"), salary: salary, location: location, work_date: workDate, status: "open" };
+        const title = data.get("title").trim(), salary = data.get("salary").trim(), location = data.get("location").trim(), workDate = data.get("work_date").trim(), description = data.get("description").trim();
+        if (!workDate) { message("勤務日を1件以上追加するか、期間を指定してください。", true); return; }
+        if (hasMarkup(title) || hasMarkup(salary) || hasMarkup(location) || hasMarkup(workDate) || hasMarkup(description)) { message("「<」「>」は求人内容に使用できません。", true); return; }
+        pendingRecord = { employer_id: currentUser?.id || null, facility_name: employerProfile?.facility_name || "", title: title, category: data.get("category"), type: data.get("type"), salary: salary, location: location, work_date: workDate, description: description, status: "open" };
         localStorage.setItem("medi_job_employer_job_draft", JSON.stringify(Object.fromEntries(data.entries())));
         openPreview(pendingRecord);
       });
@@ -270,6 +386,7 @@
       document.addEventListener("keydown", function (event) { if (event.key === "Escape" && !previewModal.hidden) closePreview(); });
       const saved = localStorage.getItem("medi_job_employer_job_draft");
       if (saved) { try { const draft = JSON.parse(saved); Object.keys(draft).forEach(function (key) { const el = form.elements[key]; if (el && draft[key] != null) el.value = draft[key]; }); } catch (_) {} }
+      if (workDateInput.value) scheduleSummary.textContent = "登録内容：" + workDateInput.value;
       document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html"; });
       load().catch(function (error) { console.error(error); message("アカウント情報を読み込めませんでした。", true); });
     })();
