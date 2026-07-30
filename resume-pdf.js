@@ -97,6 +97,7 @@
     const meta = node("div", "pdf-meta");
     [
       ["氏名", options.name || profile.name],
+      ["資格・職種", profile.license],
       ["生年月日", profile.birth_date],
       ["電話番号", profile.phone],
       ["メール", profile.email || options.email]
