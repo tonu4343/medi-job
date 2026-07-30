@@ -153,14 +153,49 @@
       printFallback(element, filename);
       return;
     }
-    await window.html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: filename,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-section", "tr"] }
-    }).from(element).save();
+    // html2canvas (bundled inside html2pdf) needs the element to actually be
+    // part of a rendered document to compute real layout - a detached node
+    // has no box size, so it captured blank/truncated pages. A hidden
+    // iframe with a clean document gives it that without visibly disturbing
+    // the calling page. But on a content-heavy page (seeker-resume.html's
+    // own header/sidebar/form), the capture still came out blank or cut
+    // short regardless of the iframe's own position/size - html2canvas
+    // appears to size its internal capture window off the *outer* page's
+    // dimensions rather than the iframe's. The one thing that reliably
+    // fixed it in testing was temporarily hiding the calling page's own
+    // body content for the moment of capture (the button already reads
+    // "PDFを作成しています…" during this, so a blank body is expected here).
+    const hiddenSiblings = Array.from(document.body.children);
+    const previousDisplay = hiddenSiblings.map(function (el) { return el.style.display; });
+    hiddenSiblings.forEach(function (el) { el.style.display = "none"; });
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "0";
+    iframe.style.left = "0";
+    iframe.style.width = "800px";
+    iframe.style.height = "1200px";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    document.body.appendChild(iframe);
+    const frameDoc = iframe.contentDocument;
+    frameDoc.open();
+    frameDoc.write("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body></body></html>");
+    frameDoc.close();
+    frameDoc.body.appendChild(element);
+    try {
+      await window.html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-section", "tr"] }
+      }).from(element).save();
+    } finally {
+      iframe.remove();
+      hiddenSiblings.forEach(function (el, i) { el.style.display = previousDisplay[i]; });
+    }
   }
 
   window.MEDISPOT_RESUME_PDF = { createDocument: createDocument, download: download };
