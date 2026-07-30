@@ -260,6 +260,26 @@
       font-weight: 800;
     }
     .notice.show { display: block; }
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: -6px 0 18px;
+      color: #33536e;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .remember-row input { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
+    .forgot-link {
+      display: block;
+      margin-top: 14px;
+      text-align: center;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .forgot-link:hover { text-decoration: underline; }
     .submit-btn {
       display: inline-flex;
       align-items: center;
@@ -410,7 +430,9 @@
           <label for="password">パスワード</label>
           <input id="password" name="password" type="password" placeholder="8文字以上" minlength="8" required>
         </div>
+        <label class="remember-row"><input type="checkbox" id="rememberMe" checked> ログイン状態を保持する</label>
         <button class="submit-btn" type="submit">ログインする</button>
+        <a class="forgot-link" href="forgot-password.html">パスワードをお忘れの方</a>
       </form>
 
       <div class="oauth-divider" id="oauthDivider"><span>または</span></div>
@@ -420,8 +442,8 @@
       </button>
 
       <div class="form-links">
-        <a href="register-seeker.html">求職者として登録</a>
-        <a href="register-employer.html">求人者として登録</a>
+        <a href="register-seeker.html">求職者として新規登録</a>
+        <a href="register-employer.html">求人者として新規登録</a>
       </div>
     </section>
   </main>

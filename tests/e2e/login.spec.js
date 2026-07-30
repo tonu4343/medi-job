@@ -59,7 +59,7 @@ test.describe("Suspended account enforcement", () => {
     await page.locator("#password").fill(password);
     await page.locator("form#loginForm button[type='submit']").click();
 
-    await expect(page.locator("#notice")).toContainText("利用停止されています", { timeout: 10000 });
+    await expect(page.locator("#notice")).toContainText("利用停止となっています", { timeout: 10000 });
     // Must not have been redirected into the dashboard.
     await expect(page).toHaveURL(/login\.html/);
   });

@@ -6,10 +6,14 @@
     !config.url.includes("YOUR_PROJECT_ID") &&
     !config.anonKey.includes("YOUR_SUPABASE_ANON_KEY");
 
-  const supabaseClient =
-    configured && window.supabase
-      ? window.supabase.createClient(config.url, config.anonKey)
-      : null;
+  // Built at submit time so the "ログイン状態を保持する" checkbox can choose
+  // between a persistent (localStorage) and tab-only (sessionStorage) session.
+  function buildClient(remember) {
+    if (!configured || !window.supabase) return null;
+    return window.supabase.createClient(config.url, config.anonKey, {
+      auth: { persistSession: true, autoRefreshToken: true, storage: remember ? window.localStorage : window.sessionStorage }
+    });
+  }
 
   const tabs = document.querySelectorAll(".role-tab");
   const roleInput = document.querySelector("#roleInput");
@@ -91,21 +95,15 @@
   function lockRole(role) {
     setRole(role);
     if (roleTabs) roleTabs.hidden = true;
-    if (loginLead) loginLead.textContent = ROLE_LABEL[role] + "としてログインしてください。";
+    if (loginLead) loginLead.textContent = ROLE_LABEL[role] + "アカウントでログインしてください。";
     if (roleSwitchLink) {
       const otherRole = role === "employer" ? "seeker" : "employer";
-      roleSwitchLink.textContent = ROLE_LABEL[otherRole] + "としてログインする場合はこちら";
+      roleSwitchLink.textContent = ROLE_LABEL[otherRole] + "の方はこちら";
       roleSwitchLink.hidden = false;
-      roleSwitchLink.onclick = () => unlockRoles(otherRole);
+      // A full navigation to login.html?role=<other>, not a return to the
+      // neutral picker - switching roles should re-lock to the other one.
+      roleSwitchLink.onclick = () => { window.location.href = "login.html?role=" + otherRole; };
     }
-  }
-
-  function unlockRoles(role) {
-    window.history.replaceState({}, "", window.location.pathname + window.location.hash);
-    if (roleTabs) roleTabs.hidden = false;
-    if (loginLead) loginLead.textContent = "ログイン種別を選択してください。";
-    if (roleSwitchLink) roleSwitchLink.hidden = true;
-    setRole(role);
   }
 
   if (lineLoginButton) {
@@ -143,6 +141,8 @@
       return;
     }
 
+    const rememberMe = document.querySelector("#rememberMe");
+    const supabaseClient = buildClient(!rememberMe || rememberMe.checked);
     if (!supabaseClient) {
       showNotice("ただいまログインをご利用いただけません。しばらくしてから再度お試しください。", true);
       return;
@@ -193,8 +193,8 @@
       await supabaseClient.auth.signOut();
       showNotice(
         profileResult.data.account_status === "withdrawn"
-          ? "このアカウントは退会済みです。ご不明な点は" + SUPPORT_LINK_HTML + "までお問い合わせください。"
-          : "このアカウントは利用停止されています。詳細は" + SUPPORT_LINK_HTML + "までお問い合わせください。",
+          ? "このアカウントは退会済みです。<br>ご不明な点は" + SUPPORT_LINK_HTML + "までお問い合わせください。"
+          : "このアカウントは現在利用停止となっています。<br>ご不明な点は" + SUPPORT_LINK_HTML + "までお問い合わせください。",
         true
       );
       return;
@@ -218,23 +218,37 @@
     setNeutral();
   }
   if (params.get("accountStatus") === "suspended") {
-    showNotice("このアカウントは利用停止されています。詳細は" + SUPPORT_LINK_HTML + "までお問い合わせください。", true);
+    showNotice("このアカウントは現在利用停止となっています。<br>ご不明な点は" + SUPPORT_LINK_HTML + "までお問い合わせください。", true);
   } else if (params.get("accountStatus") === "withdrawn") {
-    showNotice("このアカウントは退会済みです。ご不明な点は" + SUPPORT_LINK_HTML + "までお問い合わせください。", true);
+    showNotice("このアカウントは退会済みです。<br>ご不明な点は" + SUPPORT_LINK_HTML + "までお問い合わせください。", true);
   } else if (isRoleError) {
-    showNotice("現在ログイン中のアカウントでは、この画面はご利用いただけません。求職者・求人者のうち、正しい種別を選んでログインし直してください。", true);
+    showNotice("アカウント種別が異なります。<br>正しいアカウント種別を選択してログインしてください。", true);
   } else if (params.get("registered") === "1") {
     showNotice(
       params.get("confirm") === "1"
-        ? "登録が完了しました。届いた確認メールを開いて認証を完了してから、ログインしてください。"
-        : "登録が完了しました。ログインしてください。",
+        ? "登録が完了しました。<br>確認メールを送信しました。<br>メール内のリンクを確認後、ログインしてください。"
+        : "登録が完了しました。<br>ログインしてください。",
       false
     );
+    // The email a visitor just registered with is a reasonable one-time
+    // convenience prefill - never the password.
+    try {
+      const prefillEmail = sessionStorage.getItem("medi_job_prefill_email");
+      if (prefillEmail) {
+        const emailInput = document.querySelector("#email");
+        if (emailInput) emailInput.value = prefillEmail;
+        sessionStorage.removeItem("medi_job_prefill_email");
+      }
+    } catch (_) {}
   }
 
-  // These are one-time signals from a redirect - once applied, drop them so
-  // a refresh or bookmark doesn't replay a stale notice or role lock.
-  if (params.toString()) {
-    window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+  // One-time signals from a redirect - drop them once applied so a refresh
+  // or bookmark doesn't replay a stale notice, but keep ?role= since that's
+  // the page's ongoing state, not a one-time event.
+  const oneTimeParams = ["registered", "roleError", "accountStatus", "confirm"];
+  if (oneTimeParams.some((key) => params.has(key))) {
+    oneTimeParams.forEach((key) => params.delete(key));
+    const query = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (query ? "?" + query : "") + window.location.hash);
   }
 })();
