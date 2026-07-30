@@ -20,7 +20,9 @@
       <a href="index.html#faq">よくある質問</a>
     </nav>
     <div class="header-actions">
-      <a class="btn btn-outline" href="login.html">ログイン</a>
+      <a class="btn btn-outline" href="login.html" id="headerLoginLink">ログイン</a>
+      <a class="btn btn-outline" href="seeker-dashboard.html" id="headerMyPageLink" style="display:none;">マイページ</a>
+      <button class="btn btn-outline" id="headerLogoutButton" type="button" style="display:none; cursor:pointer;">ログアウト</button>
     </div>
   </header>
 
@@ -85,5 +87,34 @@
     <div class="footer-cta"><strong>まずは無料で会員登録</strong><span>あなたに合う登録ページへ進めます</span><a class="btn btn-green" href="register.html">新規会員登録（無料）›</a></div>
     <p class="copyright">© 2024 Medi Job. All Rights Reserved.</p>
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+    (function () {
+      const config = window.MEDISPOT_SUPABASE || {};
+      const configured = config.url && config.anonKey && !config.url.includes('YOUR_PROJECT_ID') && !config.anonKey.includes('YOUR_SUPABASE_ANON_KEY');
+      const supabaseClient = configured && window.supabase ? window.supabase.createClient(config.url, config.anonKey) : null;
+      function showLoggedInHeader(role) {
+        document.getElementById('headerLoginLink').style.display = 'none';
+        const myPageLink = document.getElementById('headerMyPageLink');
+        myPageLink.href = role === 'employer' ? 'employer-dashboard.html' : 'seeker-dashboard.html';
+        myPageLink.style.display = '';
+        const logoutButton = document.getElementById('headerLogoutButton');
+        logoutButton.style.display = '';
+        logoutButton.addEventListener('click', async function () {
+          await supabaseClient.auth.signOut();
+          location.href = 'index.html';
+        });
+      }
+      async function applyAuthState() {
+        if (!supabaseClient) return;
+        const session = await supabaseClient.auth.getSession();
+        const user = session.data.session?.user;
+        if (!user) return;
+        showLoggedInHeader(user.user_metadata?.role);
+      }
+      applyAuthState();
+    })();
+  </script>
 <script src="pwa-register.js"></script></body>
 </html>
