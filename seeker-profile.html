@@ -119,7 +119,10 @@
           <h2>資格・経験</h2>
           <div class="form-grid">
             <div class="field"><label for="name">氏名<span class="required">必須</span></label><input class="input" id="name" required placeholder="例）山田 花子"></div>
-            <div class="field"><label for="license">保有資格（職種）<span class="required">必須</span></label><select class="input" id="license" required><option value="">選択してください</option><option>看護師</option><option>准看護師</option><option>臨床検査技師</option><option>放射線技師</option><option>理学療法士</option><option>作業療法士</option><option>言語聴覚士</option><option>ヘルパー</option></select></div>
+            <div class="field full">
+              <label class="check-label">保有医療資格（複数選択可）<span class="required">必須</span></label>
+              <div class="check-grid" id="licenseGrid"></div>
+            </div>
             <div class="field"><label for="experience">実務経験年数<span class="required">必須</span></label><select class="input" id="experience" required><option value="">選択してください</option><option>1年未満</option><option>1-3年未満</option><option>3-5年未満</option><option>5-10年未満</option><option>10年以上</option></select></div>
             <div class="field full"><label for="qualificationName">資格名称（詳細）</label><input class="input" id="qualificationName" placeholder="例）正看護師、認定看護師（感染管理）など"></div>
             <div class="field"><label for="birthDate">生年月日<span class="required">必須</span></label><input class="input" id="birthDate" type="date" required><span class="hint" id="ageHint">生年月日を入力すると年齢を自動計算します。</span></div>
@@ -137,7 +140,7 @@
             <div class="field"><label for="preferredStyle">希望雇用形態</label><select class="input" id="preferredStyle"><option>こだわらない</option><option>スポット</option><option>パート</option><option>業務委託</option><option>非常勤</option></select></div>
             <div class="field"><label for="preferredArea">希望勤務地（首都圏）</label><select class="input" id="preferredArea"><option value="こだわらない">こだわらない</option><option value="東京都">東京都</option><option value="神奈川県">神奈川県</option><option value="千葉県">千葉県</option><option value="埼玉県">埼玉県</option></select></div>
             <div class="field"><label for="employmentStatus">現在の就業状況</label><select class="input" id="employmentStatus"><option value="">選択してください</option><option>就業中（転職・副業を検討中）</option><option>就業中（スポット・単発を希望）</option><option>離職中（すぐに就業可能）</option><option>離職中（就業準備中）</option></select></div>
-            <div class="field"><label for="commuteMethod">通勤方法</label><select class="input" id="commuteMethod"><option value="">選択してください</option><option>電車</option><option>バス</option><option>車</option><option>バイク</option><option>自転車</option><option>徒歩</option><option>その他</option></select></div>
+            <div class="field"><label for="commuteMethod">通勤方法</label><select class="input" id="commuteMethod"><option value="">選択してください</option><option>公共交通機関</option><option>自家用車（バイク含む）</option><option>自転車（徒歩含む）</option><option>その他</option></select></div>
             <div class="field"><label for="nearestStation">最寄り駅</label><input class="input" id="nearestStation" placeholder="例）新宿駅"></div>
             <div class="field full"><label for="pr">自己PR</label><textarea class="textarea" id="pr" placeholder="経験の概要や希望条件を自由にご記入ください。"></textarea></div>
           </div>
@@ -171,22 +174,30 @@
       const supabaseClient = configured && window.supabase ? window.supabase.createClient(config.url, config.anonKey) : null;
       let currentUser = null;
       let currentProfile = null;
-      let previousLicense = '';
-      const skillState = {};
       const SKILL_OTHER = 'その他（自由記載）';
+      const LICENSE_OPTIONS = ['看護師', '保健師', '助産師', '放射線技師', '臨床検査技師', '理学療法士', '作業療法士', '言語聴覚士', '介護ヘルパー'];
       const NURSE_SKILLS = ['保健師・助産師・認定（分野）', '一般病棟', '緩和ケア', 'クリニック', '健康診断（採血・心電図・眼底）', '訪問看護', '高齢者施設'];
       const REHAB_SKILLS = ['病院', 'リハビリ施設', '訪問看護', '高齢者施設', '福祉施設'];
       const SKILL_MAP = {
         '看護師': NURSE_SKILLS,
-        '准看護師': NURSE_SKILLS,
+        '保健師': NURSE_SKILLS,
+        '助産師': NURSE_SKILLS,
         '臨床検査技師': ['腹部エコー', '乳腺エコー', '頸動脈エコー', '心電図', '検体検査'],
         '放射線技師': ['一般撮影', '消化管撮影', 'MRI', 'CT', '核医学'],
         '理学療法士': REHAB_SKILLS,
         '作業療法士': REHAB_SKILLS,
         '言語聴覚士': REHAB_SKILLS,
-        'ヘルパー': ['高齢者施設', '訪問介護', '福祉施設', '障害者施設'],
+        '介護ヘルパー': ['高齢者施設', '訪問介護', '福祉施設', '障害者施設'],
       };
-      function skillsFor(license) { return (SKILL_MAP[license] || []).concat(SKILL_OTHER); }
+      function skillsForLicenses(licenses) {
+        const seen = new Set();
+        const result = [];
+        (licenses || []).forEach(function (license) {
+          (SKILL_MAP[license] || []).forEach(function (skill) { if (!seen.has(skill)) { seen.add(skill); result.push(skill); } });
+        });
+        result.push(SKILL_OTHER);
+        return result;
+      }
       function el(id) { return document.getElementById(id); }
       function esc(v) { return String(v || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c])); }
       function value(id) { return el(id)?.value?.trim() || null; }
@@ -197,21 +208,34 @@
         el('skillOther').style.display = checked ? '' : 'none';
         if (!checked) el('skillOther').value = '';
       }
-      function renderSkills(license, checkedSkills, otherText) {
+      function renderSkills(licenses, checkedSkills, otherText) {
         const set = new Set(Array.isArray(checkedSkills) ? checkedSkills : []);
-        el('skillGrid').innerHTML = skillsFor(license).map(function (skill) {
+        el('skillGrid').innerHTML = skillsForLicenses(licenses).map(function (skill) {
           const checked = set.has(skill) ? 'checked' : '';
           return '<label class="check-pill"><input type="checkbox" value="' + skill.replace(/"/g, '&quot;') + '" ' + checked + '><span>' + skill + '</span></label>';
         }).join('');
         el('skillGrid').querySelectorAll('input').forEach(input => input.addEventListener('change', syncOther));
         el('skillOther').value = otherText || '';
         syncOther();
-        previousLicense = license;
       }
       function selectedSkills() {
         const checked = Array.from(el('skillGrid').querySelectorAll('input:checked')).map(input => input.value);
         const otherText = value('skillOther');
         return checked.filter(v => v !== SKILL_OTHER).concat(checked.includes(SKILL_OTHER) ? [otherText ? SKILL_OTHER + '：' + otherText : SKILL_OTHER] : []);
+      }
+      function renderLicenses(checkedLicenses) {
+        const set = new Set(Array.isArray(checkedLicenses) ? checkedLicenses : []);
+        el('licenseGrid').innerHTML = LICENSE_OPTIONS.map(function (license) {
+          const checked = set.has(license) ? 'checked' : '';
+          return '<label class="check-pill"><input type="checkbox" value="' + license + '" ' + checked + '><span>' + license + '</span></label>';
+        }).join('');
+        el('licenseGrid').querySelectorAll('input').forEach(input => input.addEventListener('change', function () {
+          const currentSkills = Array.from(el('skillGrid').querySelectorAll('input:checked')).map(i => i.value);
+          renderSkills(selectedLicenses(), currentSkills, value('skillOther'));
+        }));
+      }
+      function selectedLicenses() {
+        return Array.from(el('licenseGrid').querySelectorAll('input:checked')).map(input => input.value);
       }
       function selectedLocations() {
         const v = value('preferredArea');
@@ -239,7 +263,8 @@
       function fill(profile, user) {
         currentProfile = profile || {};
         setValue('name', currentProfile.name);
-        setValue('license', currentProfile.license);
+        const savedLicenses = String(currentProfile.license || '').split(/[、,]/).map(s => s.trim()).filter(Boolean);
+        renderLicenses(savedLicenses);
         setValue('experience', currentProfile.experience_years);
         setValue('birthDate', currentProfile.birth_date);
         setValue('phone', currentProfile.phone);
@@ -253,25 +278,17 @@
         const otherEntry = savedSkills.find(s => s === SKILL_OTHER || s.indexOf(SKILL_OTHER + '：') === 0);
         const otherText = otherEntry && otherEntry.indexOf('：') > -1 ? otherEntry.split('：').slice(1).join('：') : '';
         const checkedSkills = savedSkills.map(s => s.indexOf(SKILL_OTHER + '：') === 0 ? SKILL_OTHER : s);
-        renderSkills(el('license').value, checkedSkills, otherText);
+        renderSkills(savedLicenses, checkedSkills, otherText);
         el('saveStatus').textContent = currentProfile.license ? '登録済み' : '未完了';
         updateAgeHint();
         el('topbarName').textContent = currentProfile.name || '求職者';
         el('topbarInitial').textContent = (currentProfile.name || '求').trim().charAt(0).toUpperCase() || '求';
       }
-      async function load() { renderSkills(el('license').value, []); if (!supabaseClient) { message('Supabase URL と anon key を設定してください。', true); return; } const session = await supabaseClient.auth.getSession(); currentUser = session.data.session?.user; if (!currentUser) { window.location.href = 'login.html?role=seeker'; return; } if (!(await window.MEDISPOT_ACCOUNT_GUARD.check(supabaseClient, currentUser, 'seeker'))) return; const result = await supabaseClient.from('seeker_profiles').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1).maybeSingle(); if (result.error || !result.data) { window.location.href = 'login.html?role=seeker&roleError=1'; return; } fill(result.data, currentUser); }
-      el('license').addEventListener('change', function () {
-        if (previousLicense) {
-          const cur = Array.from(el('skillGrid').querySelectorAll('input:checked')).map(input => input.value);
-          skillState[previousLicense] = { skills: cur, other: value('skillOther') || '' };
-        }
-        const saved = skillState[this.value];
-        renderSkills(this.value, saved ? saved.skills : [], saved ? saved.other : '');
-      });
+      async function load() { renderLicenses([]); renderSkills([], []); if (!supabaseClient) { message('Supabase URL と anon key を設定してください。', true); return; } const session = await supabaseClient.auth.getSession(); currentUser = session.data.session?.user; if (!currentUser) { window.location.href = 'login.html?role=seeker'; return; } if (!(await window.MEDISPOT_ACCOUNT_GUARD.check(supabaseClient, currentUser, 'seeker'))) return; const result = await supabaseClient.from('seeker_profiles').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1).maybeSingle(); if (result.error || !result.data) { window.location.href = 'login.html?role=seeker&roleError=1'; return; } fill(result.data, currentUser); }
       el('certificateFiles').addEventListener('change', function () { const files = Array.from(this.files || []); el('uploadList').innerHTML = files.length ? files.map(file => '<li>' + esc(file.name) + '</li>').join('') : '<li>まだファイルが選択されていません。</li>'; });
       el('birthDate').addEventListener('input', updateAgeHint);
       el('logoutButton').addEventListener('click', async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = 'login.html'; });
-      el('seekerProfileForm').addEventListener('submit', async function (event) { event.preventDefault(); if (!supabaseClient || !currentUser || !currentProfile?.id) return; const payload = { name: value('name'), birth_date: value('birthDate'), phone: value('phone'), license: value('license'), experience_years: value('experience'), preferred_area: selectedLocations(), preferred_style: value('preferredStyle'), employment_status: value('employmentStatus'), commute_method: value('commuteMethod'), nearest_station: value('nearestStation'), skills: selectedSkills(), pr: value('pr') }; const result = await supabaseClient.from('seeker_profiles').update(payload).eq('id', currentProfile.id).eq('user_id', currentUser.id); if (result.error) { console.error(result.error); message('保存に失敗しました。' + (result.error.message ? ' ' + result.error.message : ''), true); return; } message('プロフィールを保存しました。前の画面に戻ります。', false); el('saveStatus').textContent = '登録済み'; const back = document.referrer && new URL(document.referrer).origin === window.location.origin ? document.referrer : 'seeker-dashboard.html'; setTimeout(function () { window.location.href = back; }, 900); });
+      el('seekerProfileForm').addEventListener('submit', async function (event) { event.preventDefault(); if (!supabaseClient || !currentUser || !currentProfile?.id) return; const licenses = selectedLicenses(); if (!licenses.length) { message('保有医療資格を1つ以上選択してください。', true); return; } const payload = { name: value('name'), birth_date: value('birthDate'), phone: value('phone'), license: licenses.join('、'), experience_years: value('experience'), preferred_area: selectedLocations(), preferred_style: value('preferredStyle'), employment_status: value('employmentStatus'), commute_method: value('commuteMethod'), nearest_station: value('nearestStation'), skills: selectedSkills(), pr: value('pr') }; const result = await supabaseClient.from('seeker_profiles').update(payload).eq('id', currentProfile.id).eq('user_id', currentUser.id); if (result.error) { console.error(result.error); message('保存に失敗しました。' + (result.error.message ? ' ' + result.error.message : ''), true); return; } message('プロフィールを保存しました。前の画面に戻ります。', false); el('saveStatus').textContent = '登録済み'; const back = document.referrer && new URL(document.referrer).origin === window.location.origin ? document.referrer : 'seeker-dashboard.html'; setTimeout(function () { window.location.href = back; }, 900); });
       load().catch(function (error) { console.error(error); message('プロフィールを読み込めませんでした。', true); });
     })();
   </script>
