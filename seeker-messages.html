@@ -194,7 +194,7 @@
         if (totalUnread > 0) { badge.hidden = false; badge.textContent = String(totalUnread); sideBadge.hidden = false; sideBadge.textContent = String(totalUnread); }
       }
 
-      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html"; });
+      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html?role=seeker"; });
       load().catch(function (error) { console.error(error); renderInbox([]); });
     })();
   </script>

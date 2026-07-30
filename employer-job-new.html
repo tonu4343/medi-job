@@ -387,7 +387,7 @@
       const saved = localStorage.getItem("medi_job_employer_job_draft");
       if (saved) { try { const draft = JSON.parse(saved); Object.keys(draft).forEach(function (key) { const el = form.elements[key]; if (el && draft[key] != null) el.value = draft[key]; }); } catch (_) {} }
       if (workDateInput.value) scheduleSummary.textContent = "登録内容：" + workDateInput.value;
-      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html"; });
+      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html?role=employer"; });
       load().catch(function (error) { console.error(error); message("アカウント情報を読み込めませんでした。", true); });
     })();
   </script>

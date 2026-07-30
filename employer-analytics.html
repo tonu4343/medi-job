@@ -320,7 +320,7 @@
         renderMonthTable(hiredApps, invoicesByApp);
       }
 
-      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html"; });
+      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html?role=employer"; });
       load().catch(function (error) { console.error(error); });
     })();
   </script>

@@ -580,7 +580,7 @@
         if (unread > 0 && sideBadge) { sideBadge.hidden = false; sideBadge.textContent = String(unread); }
       }
 
-      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html"; });
+      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html?role=seeker"; });
       document.querySelector(".bell-btn").addEventListener("click", function () { window.location.href = "seeker-messages.html"; });
       loadDashboard().catch(function (error) { console.error(error); applyProfile(null, null); renderJobs(demoJobs); renderRecentJobs(demoJobs); renderApps([]); renderMessages([], []); });
     })();

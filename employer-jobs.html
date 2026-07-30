@@ -255,7 +255,7 @@
         else { renderJobs(jobsResult.data || [], applications); }
       }
 
-      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html"; });
+      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html?role=employer"; });
 
       document.getElementById("jobFilterTabs").addEventListener("click", function (event) {
         const tab = event.target.closest(".job-filter-tab");

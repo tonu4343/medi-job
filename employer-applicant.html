@@ -311,7 +311,7 @@
 
       document.getElementById("startSelectionButton").addEventListener("click", startSelection);
       document.getElementById("downloadResumeButton").addEventListener("click", downloadResumePdf);
-      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html"; });
+      document.getElementById("logoutButton").addEventListener("click", async function () { if (supabaseClient) await supabaseClient.auth.signOut(); window.location.href = "login.html?role=employer"; });
       load().catch(function (error) { console.error(error); message("応募者情報の読み込み中にエラーが発生しました。", true); });
     })();
   </script>

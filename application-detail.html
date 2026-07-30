@@ -187,7 +187,7 @@ body.detail-page{background:linear-gradient(180deg,#f4faff,#fff 52%,#f2faf8);col
     }
   }
 
-  document.getElementById("logoutButton").addEventListener("click", async function () { if (client) await client.auth.signOut(); window.location.href = "login.html"; });
+  document.getElementById("logoutButton").addEventListener("click", async function () { if (client) await client.auth.signOut(); window.location.href = "login.html?role=seeker"; });
   load().catch(function (error) { console.error(error); document.getElementById("emptyNote").hidden = false; text("emptyNote", "応募情報を読み込めませんでした。"); });
 })();
 </script>
