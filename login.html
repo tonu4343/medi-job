@@ -145,23 +145,17 @@
       gap: 12px;
       margin-top: 26px;
     }
-    .benefit {
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
+    .benefit-group strong {
+      display: block;
       color: var(--blue-dark);
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 900;
     }
-    .benefit span {
-      display: grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      color: var(--blue);
-      border: 2px solid var(--blue);
-      border-radius: 50%;
-      line-height: 1;
+    .benefit-group p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
     }
 
     .login-card {
@@ -382,11 +376,16 @@
   <main class="login-wrap">
     <section class="intro">
       <h1>ログイン</h1>
-      <p>登録済みのメールアドレスとパスワードで、求人検索・応募管理・採用状況の確認を始められます。</p>
+      <p>登録済みのメールアドレスとパスワードでログインしてください。</p>
       <div class="benefits" aria-label="ログイン後にできること">
-        <div class="benefit"><span>✓</span><p>求職者は応募状況とチャットを確認できます</p></div>
-        <div class="benefit"><span>✓</span><p>求人者は掲載求人と応募者を管理できます</p></div>
-        <div class="benefit"><span>¥</span><p>成功報酬型なので掲載は無料で始められます</p></div>
+        <div class="benefit-group">
+          <strong>求職者は</strong>
+          <p>・職務経歴書や希望する業務の登録、求人情報の検索ができます。</p>
+        </div>
+        <div class="benefit-group">
+          <strong>求人者は</strong>
+          <p>・求人情報の登録や応募者スキルなどがご覧いただけます。</p>
+        </div>
       </div>
     </section>
 
